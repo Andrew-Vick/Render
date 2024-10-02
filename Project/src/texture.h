@@ -110,4 +110,75 @@ private:
   double scale;
 };
 
+class cubemap : public texture
+{
+public:
+  // Constructor to handle 6 separate HDR files for cubemap faces
+  explicit cubemap(const std::array<std::string, 6> &filenames)
+  {
+    load_cube_map_faces(filenames);
+  }
+
+  color value(double u, double v, const point3 &p) const override
+  {
+    // Determine which face of the cubemap to sample from based on the direction vector `p`
+    int face_index = determine_face(p);
+
+    // Normalize the texture coordinates (u, v)
+    u = 0.5f * (u + 1.0f);
+    v = 0.5f * (v + 1.0f);
+
+    // Sample the appropriate face of the cubemap
+    return sample_face(face_index, u, v);
+  }
+
+private:
+  std::array<std::shared_ptr<rtw_image>, 6> images;
+
+  // Function to load 6 separate HDR files into the cubemap
+  void load_cube_map_faces(const std::array<std::string, 6> &filenames)
+  {
+    for (int i = 0; i < 6; ++i)
+    {
+      images[i] = std::make_shared<rtw_image>(filenames[i].c_str());
+      if (images[i]->width() == 0 || images[i]->height() == 0)
+      {
+        std::cerr << "ERROR: Failed to load cubemap face: " << filenames[i] << std::endl;
+      }
+    }
+  }
+
+  // Determine which cubemap face to sample based on direction vector `p`
+  int determine_face(const point3 &p) const
+  {
+    double absX = fabs(p.x()), absY = fabs(p.y()), absZ = fabs(p.z());
+    if (absX >= absY && absX >= absZ)
+      return (p.x() > 0) ? 0 : 1; // +X or -X
+    else if (absY >= absX && absY >= absZ)
+      return (p.y() > 0) ? 2 : 3; // +Y or -Y
+    else
+      return (p.z() > 0) ? 4 : 5; // +Z or -Z
+  }
+
+  // Sample a specific cubemap face at the given (u, v) texture coordinates
+  color sample_face(int face_index, double u, double v) const
+  {
+    const auto &image = images[face_index];
+
+    if (image->height() <= 0)
+      return color(0, 1, 1); // Debugging aid (cyan)
+
+    // Clamp texture coordinates to [0, 1]
+    u = interval(0, 1).clamp(u);
+    v = 1.0 - interval(0, 1).clamp(v); // Flip v for image coordinates
+
+    int i = int(u * image->width());
+    int j = int(v * image->height());
+
+    // Sample the pixel data from the image
+    const unsigned char *pixel = image->pixel_data(i, j);
+    return color(pixel[0] / 255.0, pixel[1] / 255.0, pixel[2] / 255.0);
+  }
+};
+
 #endif

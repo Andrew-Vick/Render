@@ -39,3 +39,4 @@
 .vscode/
 .DS_Store
 *.DS_Store
+Project/CMakeLists.txt
