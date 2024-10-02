@@ -1,3 +1,0 @@
-/Users/andrewvick/Coms336/Project/build/CMakeFiles/inOneWeekend.dir
-/Users/andrewvick/Coms336/Project/build/CMakeFiles/edit_cache.dir
-/Users/andrewvick/Coms336/Project/build/CMakeFiles/rebuild_cache.dir
