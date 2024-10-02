@@ -71,7 +71,7 @@ public:
 
     auto i = int(u * image.width());
     auto j = int(v * image.height());
-    auto pixel = image.pixel_data(i, j);
+    auto pixel = image.pixel_data_ldr(i, j);
 
     auto color_scale = 1.0 / 255.0;
     return color(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
@@ -124,10 +124,6 @@ public:
     // Determine which face of the cubemap to sample from based on the direction vector `p`
     int face_index = determine_face(p);
 
-    // Normalize the texture coordinates (u, v)
-    u = 0.5f * (u + 1.0f);
-    v = 0.5f * (v + 1.0f);
-
     // Sample the appropriate face of the cubemap
     return sample_face(face_index, u, v);
   }
@@ -175,9 +171,39 @@ private:
     int i = int(u * image->width());
     int j = int(v * image->height());
 
-    // Sample the pixel data from the image
-    const unsigned char *pixel = image->pixel_data(i, j);
-    return color(pixel[0] / 255.0, pixel[1] / 255.0, pixel[2] / 255.0);
+    // Ensure i and j are within bounds
+    if (i >= image->width())
+      i = image->width() - 1;
+    if (j >= image->height())
+      j = image->height() - 1;
+
+    if (image->is_hdr_image())
+    {
+      // Sample the pixel data from the HDR image
+      const float *pixel = image->pixel_data_hdr(i, j);
+      float r = pixel[0];
+      float g = pixel[1];
+      float b = pixel[2];
+
+      // Apply scaling factor for HDR values (adjust as needed)
+      float scale = 1.0f; // Adjust this scale factor based on your HDR range
+      r *= scale;
+      g *= scale;
+      b *= scale;
+
+      // Clamp the values to [0, 1] range to avoid overflow
+      r = interval(0.0, 1.0).clamp(r);
+      g = interval(0.0, 1.0).clamp(g);
+      b = interval(0.0, 1.0).clamp(b);
+
+      return color(r, g, b);
+    }
+    else
+    {
+      // Sample the pixel data from the LDR image
+      const unsigned char *pixel = image->pixel_data_ldr(i, j);
+      return color(pixel[0] / 255.0, pixel[1] / 255.0, pixel[2] / 255.0);
+    }
   }
 };
 

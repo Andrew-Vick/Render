@@ -42,32 +42,32 @@ public:
 /**
  * ORIGINAL RENDER METHOD -- SINGLE THREAD
  */
-  void render(const hittable &world)
-  {
-    initialize();
+  // void render(const hittable &world)
+  // {
+  //   initialize();
 
-    std::cout << "P3\n"
-              << image_width << ' ' << image_height << "\n255\n";
+  //   std::cout << "P3\n"
+  //             << image_width << ' ' << image_height << "\n255\n";
 
-    for (int j = 0; j < image_height; j++)
-    {
-      std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-      for (int i = 0; i < image_width; i++)
-      {
+  //   for (int j = 0; j < image_height; j++)
+  //   {
+  //     std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+  //     for (int i = 0; i < image_width; i++)
+  //     {
 
-        color pixel_color(0, 0, 0); // CHANGING VALUES HERE GIVE A HUE
+  //       color pixel_color(0, 0, 0); // CHANGING VALUES HERE GIVE A HUE
 
-        for (int sample = 0; sample < samples_per_pixel; sample++)
-        {
-          ray r = get_ray(i, j);
-          pixel_color += ray_color(r, max_depth, world, background);
-        }
-        write_color(std::cout, pixel_samples_scale * pixel_color);
-      }
-    }
+  //       for (int sample = 0; sample < samples_per_pixel; sample++)
+  //       {
+  //         ray r = get_ray(i, j);
+  //         pixel_color += ray_color(r, max_depth, world, background);
+  //       }
+  //       write_color(std::cout, pixel_samples_scale * pixel_color);
+  //     }
+  //   }
 
-    std::clog << "\rDone.                 \n";
-  }
+  //   std::clog << "\rDone.                 \n";
+  // }
 
 /**
  * NEW RENDER METHOD -- MULTI THREAD
@@ -89,70 +89,70 @@ public:
  *   - processes the task
  * 4. Need thread pool management, where threads are created once and then reused
  */
-  // std::mutex output_mutex;
-  // std::atomic<int> lines_rendered{0};
+  std::mutex output_mutex;
+  std::atomic<int> lines_rendered{0};
 
   camera(color background_color) : background(make_shared<solid_color>(background_color)) {}
 
   camera(shared_ptr<texture> bg) : background(bg) {}
 
-  // void render(const hittable &world)
-  // {
-  //   initialize();
+  void render(const hittable &world)
+  {
+    initialize();
 
-  //   int num_threads = std::thread::hardware_concurrency();
-  //   int rows_per_thread = image_height / num_threads;
+    int num_threads = std::thread::hardware_concurrency();
+    int rows_per_thread = image_height / num_threads;
 
-  //   std::vector<std::future<void>> futures;
-  //   std::vector<color> image_data(image_width * image_height);
+    std::vector<std::future<void>> futures;
+    std::vector<color> image_data(image_width * image_height);
 
-  //   auto render_chunk = [&](int start_row, int end_row)
-  //   {
-  //     for (int j = start_row; j < end_row; ++j)
-  //     {
-  //       for (int i = 0; i < image_width; ++i)
-  //       {
-  //         color pixel_color(0, 0, 0);
-  //         for (int sample = 0; sample < samples_per_pixel; ++sample)
-  //         {
-  //           ray r = get_ray(i, j);
-  //           pixel_color += ray_color(r, max_depth, world, background);
-  //         }
-  //         image_data[j * image_width + i] = pixel_samples_scale * pixel_color;
-  //       }
-  //       lines_rendered++;
-  //       {
-  //         std::lock_guard<std::mutex> lock(output_mutex);
-  //         int percentage = static_cast<int>(100.0 * lines_rendered / image_height);
-  //         std::clog << "\rRendering: " << percentage << "% complete" << std::flush;
-  //       }
-  //     }
-  //   };
+    auto render_chunk = [&](int start_row, int end_row)
+    {
+      for (int j = start_row; j < end_row; ++j)
+      {
+        for (int i = 0; i < image_width; ++i)
+        {
+          color pixel_color(0, 0, 0);
+          for (int sample = 0; sample < samples_per_pixel; ++sample)
+          {
+            ray r = get_ray(i, j);
+            pixel_color += ray_color(r, max_depth, world, background);
+          }
+          image_data[j * image_width + i] = pixel_samples_scale * pixel_color;
+        }
+        lines_rendered++;
+        {
+          std::lock_guard<std::mutex> lock(output_mutex);
+          int percentage = static_cast<int>(100.0 * lines_rendered / image_height);
+          std::clog << "\rRendering: " << percentage << "% complete" << std::flush;
+        }
+      }
+    };
 
-  //   for (int t = 0; t < num_threads; ++t)
-  //   {
-  //     int start_row = t * rows_per_thread;
-  //     int end_row = (t == num_threads - 1) ? image_height : start_row + rows_per_thread;
+    for (int t = 0; t < num_threads; ++t)
+    {
+      int start_row = t * rows_per_thread;
+      int end_row = (t == num_threads - 1) ? image_height : start_row + rows_per_thread;
 
-  //     futures.push_back(std::async(std::launch::async, render_chunk, start_row, end_row));
-  //   }
+      futures.push_back(std::async(std::launch::async, render_chunk, start_row, end_row));
+    }
 
-  //   for (auto &future : futures)
-  //   {
-  //     future.get();
-  //   }
+    for (auto &future : futures)
+    {
+      future.get();
+    }
 
-  //   std::cout << "P3\n"
-  //             << image_width << ' ' << image_height << "\n255\n";
-  //   for (int j = 0; j < image_height; ++j)
-  //   {
-  //     for (int i = 0; i < image_width; ++i)
-  //     {
-  //       write_color(std::cout, image_data[j * image_width + i]);
-  //     }
-  //   }
-  //   std::clog << "\rDone.                 \n";
-  // }
+    std::cout << "P3\n"
+              << image_width << ' ' << image_height << "\n255\n";
+    for (int j = 0; j < image_height; ++j)
+    {
+      for (int i = 0; i < image_width; ++i)
+      {
+        write_color(std::cout, image_data[j * image_width + i], samples_per_pixel);
+      }
+    }
+    std::clog << "\rDone.                 \n";
+  }
 
 private:
   /* Private Camera Variables Here */
@@ -236,7 +236,7 @@ private:
   color ray_color(const ray &r, int depth, const hittable &world, shared_ptr<texture> background) const
   {
     if (depth <= 0)
-      return color(0, 0, 0);
+      return color(255, 0, 0);
 
     hit_record rec;
     // If the ray hits nothing, return the background color.

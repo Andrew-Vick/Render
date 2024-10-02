@@ -417,9 +417,6 @@ void cube_map_test()
   // Create the cubemap texture from the 6 faces
   auto cubemap_texture = std::make_shared<cubemap>(cubemap_faces);
 
-  // Create a large sphere with the cube map texture to act as the background
-  world.add(make_shared<sphere>(point3(0, 0, 0), 5000, make_shared<lambertian>(cubemap_texture)));
-
   // Add objects to the scene
   auto metal_material = make_shared<metal>(color(0.8, 0.8, 0.9), 0.0);
   world.add(make_shared<sphere>(point3(-1, 0, 0), 1.0, metal_material));
@@ -436,7 +433,8 @@ void cube_map_test()
   cam.max_depth = 50;
 
   // Adjust background handling for the cubemap (setting it to null will use the cubemap)
-  cam.background = nullptr;
+  cam.background = cubemap_texture;
+  
 
   cam.vfov = 90;
   cam.lookfrom = point3(0, 0, 5);
