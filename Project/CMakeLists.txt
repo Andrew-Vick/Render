@@ -3,7 +3,7 @@ project(COMS336 LANGUAGES CXX)
 
 set ( CMAKE_CXX_STANDARD          11 )
 set ( CMAKE_CXX_STANDARD_REQUIRED ON )
-set ( CMAKE_CXX_EXTENSIONS        OFF )
+set ( CMAKE_CXX_EXTENSIONS        ON )
 
 set ( SOURCE_ONE_WEEKEND
   src/main.cc
@@ -27,4 +27,7 @@ set ( SOURCE_ONE_WEEKEND
 
 include_directories(src)
 
-add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
+# Set the build type to Release
+set(CMAKE_BUILD_TYPE Release)
+
+add_executable(inOneWeekend ${EXTERNAL} ${SOURCE_ONE_WEEKEND})

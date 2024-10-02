@@ -90,6 +90,26 @@ public:
   //   std::clog << "\rDone.                 \n";
   // }
 
+/**
+ * NEW RENDER METHOD -- MULTI THREAD
+ * 
+ * This method will render the image in parallel using multiple threads.
+ * The image is divided into chunks of rows, and each thread renders a chunk.
+ * 
+ * IMPROVEMENTS:
+ * - add a dynamic task queue to allow for more efficient thread management and load balancing
+ * 
+ * pseudocode for dynamic task queue:
+ * 1. Create task struct (e.g. tile coordinates 16x16 pixels) -- expiriment with different sizes, too small and overhead is too high, too large and load balancing is poor
+ * 2. init task queue
+ * 3. replace chunk processing with a loop that 
+ *   - Locks the queue
+ *   - checks if queue is empty
+ *   - if not, pops a task from the queue
+ *   - unlocks the queue
+ *   - processes the task
+ * 4. Need thread pool management, where threads are created once and then reused
+ */
   std::mutex output_mutex;
   std::atomic<int> lines_rendered{0};
 
