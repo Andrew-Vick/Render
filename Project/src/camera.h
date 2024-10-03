@@ -21,10 +21,10 @@ class camera
 {
 public:
   /* Public Camera Parameters Here */
-  double aspect_ratio = 1.0;  // Ratio of image width over height
-  int image_width = 100;      // Rendered image width in pixel count
-  int samples_per_pixel = 10; // Count for random samples for each pixel
-  int max_depth = 10;         // Maximum number of ray bounces into scene
+  double aspect_ratio = 1.0;      // Ratio of image width over height
+  int image_width = 100;          // Rendered image width in pixel count
+  int samples_per_pixel = 10;     // Count for random samples for each pixel
+  int max_depth = 10;             // Maximum number of ray bounces into scene
   shared_ptr<texture> background; // Scene background color
 
   double vfov = 90;                  // Vertical field-of-view in degrees
@@ -35,13 +35,9 @@ public:
   double defocus_angle = 0; // Variation angle of rays through each pixel
   double focus_dist = 10;   // Distance from camera lookfrom point to plane of perfect focus
 
-
-
-
-
-/**
- * ORIGINAL RENDER METHOD -- SINGLE THREAD
- */
+  /**
+   * ORIGINAL RENDER METHOD -- SINGLE THREAD
+   */
   // void render(const hittable &world)
   // {
   //   initialize();
@@ -69,26 +65,26 @@ public:
   //   std::clog << "\rDone.                 \n";
   // }
 
-/**
- * NEW RENDER METHOD -- MULTI THREAD
- * 
- * This method will render the image in parallel using multiple threads.
- * The image is divided into chunks of rows, and each thread renders a chunk.
- * 
- * IMPROVEMENTS:
- * - add a dynamic task queue to allow for more efficient thread management and load balancing
- * 
- * pseudocode for dynamic task queue:
- * 1. Create task struct (e.g. tile coordinates 16x16 pixels) -- expiriment with different sizes, too small and overhead is too high, too large and load balancing is poor
- * 2. init task queue
- * 3. replace chunk processing with a loop that 
- *   - Locks the queue
- *   - checks if queue is empty
- *   - if not, pops a task from the queue
- *   - unlocks the queue
- *   - processes the task
- * 4. Need thread pool management, where threads are created once and then reused
- */
+  /**
+   * NEW RENDER METHOD -- MULTI THREAD
+   *
+   * This method will render the image in parallel using multiple threads.
+   * The image is divided into chunks of rows, and each thread renders a chunk.
+   *
+   * IMPROVEMENTS:
+   * - add a dynamic task queue to allow for more efficient thread management and load balancing
+   *
+   * pseudocode for dynamic task queue:
+   * 1. Create task struct (e.g. tile coordinates 16x16 pixels) -- expiriment with different sizes, too small and overhead is too high, too large and load balancing is poor
+   * 2. init task queue
+   * 3. replace chunk processing with a loop that
+   *   - Locks the queue
+   *   - checks if queue is empty
+   *   - if not, pops a task from the queue
+   *   - unlocks the queue
+   *   - processes the task
+   * 4. Need thread pool management, where threads are created once and then reused
+   */
   std::mutex output_mutex;
   std::atomic<int> lines_rendered{0};
 
@@ -240,7 +236,8 @@ private:
 
     hit_record rec;
     // If the ray hits nothing, return the background color.
-    if (!world.hit(r, interval(0.001, infinity), rec)){
+    if (!world.hit(r, interval(0.001, infinity), rec))
+    {
       vec3 dir = unit_vector(r.direction());
       float phi = atan2(dir.z(), dir.x()); // Angle around the vertical axis
       float theta = asin(dir.y());         // Angle above/below the horizon

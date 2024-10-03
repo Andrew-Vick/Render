@@ -96,10 +96,10 @@ public:
     // We want to map [-1,1] to [0,1] for color values. We do this by scaling by 0.5 and then shifting by 1 plus the noise value.
 
     // This is for using using with the Perlin_interp function
-    //return color(1, 1, 1) * 0.5 * (1.0 + noise.noise(scale * p));
+    // return color(1, 1, 1) * 0.5 * (1.0 + noise.noise(scale * p));
 
     // This is for using with the turb function
-    //return color(1, 1, 1) * noise.turb(scale * p, 7);
+    // return color(1, 1, 1) * noise.turb(scale * p, 7);
 
     // This gives you a marble texture
     return color(.5, .5, .5) * (1 + std::sin(scale * p.z() + 10 * noise.turb(p, 7)));

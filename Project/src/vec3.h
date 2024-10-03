@@ -34,6 +34,24 @@ class vec3 {
         return *this *= 1/t;
     }
 
+    // Component-wise division by another vec3
+    vec3 &operator/=(const vec3 &v)
+    {
+        e[0] /= v.e[0];
+        e[1] /= v.e[1];
+        e[2] /= v.e[2];
+        return *this;
+    }
+
+    // Component-wise clamp function for vec3
+    vec3 clamper(double min_val, double max_val) const
+    {
+        return vec3(
+            interval(min_val, max_val).clamp(e[0]),
+            interval(min_val, max_val).clamp(e[1]),
+            interval(min_val, max_val).clamp(e[2]));
+    }
+
     double length() const {
         return std::sqrt(length_squared());
     }
