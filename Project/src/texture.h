@@ -1,5 +1,15 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
+//==============================================================================================
+// Originally written in 2016 by Peter Shirley <ptrshrl@gmail.com>
+//
+// To the extent possible under law, the author(s) have dedicated all copyright and related and
+// neighboring rights to this software to the public domain worldwide. This software is
+// distributed without any warranty.
+//
+// You should have received a copy (see file COPYING.txt) of the CC0 Public Domain Dedication
+// along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+//==============================================================================================
 
 #include "perlin.h"
 #include "rtw_stb_image.h"
@@ -71,7 +81,7 @@ public:
 
     auto i = int(u * image.width());
     auto j = int(v * image.height());
-    auto pixel = image.pixel_data_ldr(i, j);
+    auto pixel = image.pixel_data(i, j);
 
     auto color_scale = 1.0 / 255.0;
     return color(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
@@ -83,128 +93,17 @@ private:
 
 class noise_texture : public texture
 {
-  // scale is the frequency of the noise
-  // Higher frequency means more noise
 public:
   noise_texture(double scale) : scale(scale) {}
 
   color value(double u, double v, const point3 &p) const override
   {
-    // return color(1, 1, 1) * noise.noise(scale * p);
-
-    // The output of the Perlin_interp is in the range [-1,1].
-    // We want to map [-1,1] to [0,1] for color values. We do this by scaling by 0.5 and then shifting by 1 plus the noise value.
-
-    // This is for using using with the Perlin_interp function
-    // return color(1, 1, 1) * 0.5 * (1.0 + noise.noise(scale * p));
-
-    // This is for using with the turb function
-    // return color(1, 1, 1) * noise.turb(scale * p, 7);
-
-    // This gives you a marble texture
     return color(.5, .5, .5) * (1 + std::sin(scale * p.z() + 10 * noise.turb(p, 7)));
   }
 
 private:
   perlin noise;
   double scale;
-};
-
-class cubemap : public texture
-{
-public:
-  // Constructor to handle 6 separate HDR files for cubemap faces
-  explicit cubemap(const std::array<std::string, 6> &filenames)
-  {
-    load_cube_map_faces(filenames);
-  }
-
-  color value(double u, double v, const point3 &p) const override
-  {
-    // Determine which face of the cubemap to sample from based on the direction vector `p`
-    int face_index = determine_face(p);
-
-    // Sample the appropriate face of the cubemap
-    return sample_face(face_index, u, v);
-  }
-
-private:
-  std::array<std::shared_ptr<rtw_image>, 6> images;
-
-  // Function to load 6 separate HDR files into the cubemap
-  void load_cube_map_faces(const std::array<std::string, 6> &filenames)
-  {
-    for (int i = 0; i < 6; ++i)
-    {
-      images[i] = std::make_shared<rtw_image>(filenames[i].c_str());
-      if (images[i]->width() == 0 || images[i]->height() == 0)
-      {
-        std::cerr << "ERROR: Failed to load cubemap face: " << filenames[i] << std::endl;
-      }
-    }
-  }
-
-  // Determine which cubemap face to sample based on direction vector `p`
-  int determine_face(const point3 &p) const
-  {
-    double absX = fabs(p.x()), absY = fabs(p.y()), absZ = fabs(p.z());
-    if (absX >= absY && absX >= absZ)
-      return (p.x() > 0) ? 0 : 1; // +X or -X
-    else if (absY >= absX && absY >= absZ)
-      return (p.y() > 0) ? 2 : 3; // +Y or -Y
-    else
-      return (p.z() > 0) ? 4 : 5; // +Z or -Z
-  }
-
-  // Sample a specific cubemap face at the given (u, v) texture coordinates
-  color sample_face(int face_index, double u, double v) const
-  {
-    const auto &image = images[face_index];
-
-    if (image->height() <= 0)
-      return color(0, 1, 1); // Debugging aid (cyan)
-
-    // Clamp texture coordinates to [0, 1]
-    u = interval(0, 1).clamp(u);
-    v = 1.0 - interval(0, 1).clamp(v); // Flip v for image coordinates
-
-    int i = int(u * image->width());
-    int j = int(v * image->height());
-
-    // Ensure i and j are within bounds
-    if (i >= image->width())
-      i = image->width() - 1;
-    if (j >= image->height())
-      j = image->height() - 1;
-
-    if (image->is_hdr_image())
-    {
-      // Sample the pixel data from the HDR image
-      const float *pixel = image->pixel_data_hdr(i, j);
-      float r = pixel[0];
-      float g = pixel[1];
-      float b = pixel[2];
-
-      // Apply scaling factor for HDR values (adjust as needed)
-      float scale = 1.0f; // Adjust this scale factor based on your HDR range
-      r *= scale;
-      g *= scale;
-      b *= scale;
-
-      // Clamp the values to [0, 1] range to avoid overflow
-      r = interval(0.0, 1.0).clamp(r);
-      g = interval(0.0, 1.0).clamp(g);
-      b = interval(0.0, 1.0).clamp(b);
-
-      return color(r, g, b);
-    }
-    else
-    {
-      // Sample the pixel data from the LDR image
-      const unsigned char *pixel = image->pixel_data_ldr(i, j);
-      return color(pixel[0] / 255.0, pixel[1] / 255.0, pixel[2] / 255.0);
-    }
-  }
 };
 
 #endif

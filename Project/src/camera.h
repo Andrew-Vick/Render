@@ -21,11 +21,11 @@ class camera
 {
 public:
   /* Public Camera Parameters Here */
-  double aspect_ratio = 1.0;      // Ratio of image width over height
-  int image_width = 100;          // Rendered image width in pixel count
-  int samples_per_pixel = 10;     // Count for random samples for each pixel
-  int max_depth = 10;             // Maximum number of ray bounces into scene
-  shared_ptr<texture> background; // Scene background color
+  double aspect_ratio = 1.0;  // Ratio of image width over height
+  int image_width = 100;      // Rendered image width in pixel count
+  int samples_per_pixel = 10; // Count for random samples for each pixel
+  int max_depth = 10;         // Maximum number of ray bounces into scene
+  color background;           // Scene background color
 
   double vfov = 90;                  // Vertical field-of-view in degrees
   point3 lookfrom = point3(0, 0, 0); // Point camera is looking from
@@ -34,6 +34,29 @@ public:
 
   double defocus_angle = 0; // Variation angle of rays through each pixel
   double focus_dist = 10;   // Distance from camera lookfrom point to plane of perfect focus
+
+  /**
+   * OLD RENDER CHUNK METHOD -- MULTI THREAD
+   * may not need this
+   */
+  // void render_chunk(const hittable& world, int start_row, int end_row, std::vector<color> &image_data)
+  // {
+  //   for (int j = start_row; j < end_row; ++j)
+  //   {
+  //     for (int i = 0; i < image_width; ++i)
+  //     {
+  //       color pixel_color(0, 0, 0);
+  //       for (int s = 0; s < samples_per_pixel; ++s)
+  //       {
+  //         auto u = (i + random_double()) / (image_width - 1);
+  //         auto v = (j + random_double()) / (image_height - 1);
+  //         ray r = get_ray(u, v);
+  //         pixel_color += ray_color(r, max_depth, world);
+  //       }
+  //       image_data[j * image_width + i] = pixel_color;
+  //     }
+  //   }
+  // }
 
   /**
    * ORIGINAL RENDER METHOD -- SINGLE THREAD
@@ -56,7 +79,7 @@ public:
   //       for (int sample = 0; sample < samples_per_pixel; sample++)
   //       {
   //         ray r = get_ray(i, j);
-  //         pixel_color += ray_color(r, max_depth, world, background);
+  //         pixel_color += ray_color(r, max_depth, world);
   //       }
   //       write_color(std::cout, pixel_samples_scale * pixel_color);
   //     }
@@ -88,10 +111,6 @@ public:
   std::mutex output_mutex;
   std::atomic<int> lines_rendered{0};
 
-  camera(color background_color) : background(make_shared<solid_color>(background_color)) {}
-
-  camera(shared_ptr<texture> bg) : background(bg) {}
-
   void render(const hittable &world)
   {
     initialize();
@@ -112,7 +131,7 @@ public:
           for (int sample = 0; sample < samples_per_pixel; ++sample)
           {
             ray r = get_ray(i, j);
-            pixel_color += ray_color(r, max_depth, world, background);
+            pixel_color += ray_color(r, max_depth, world);
           }
           image_data[j * image_width + i] = pixel_samples_scale * pixel_color;
         }
@@ -144,7 +163,7 @@ public:
     {
       for (int i = 0; i < image_width; ++i)
       {
-        write_color(std::cout, image_data[j * image_width + i], samples_per_pixel);
+        write_color(std::cout, image_data[j * image_width + i]);
       }
     }
     std::clog << "\rDone.                 \n";
@@ -229,24 +248,15 @@ private:
     return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
   }
 
-  color ray_color(const ray &r, int depth, const hittable &world, shared_ptr<texture> background) const
+  color ray_color(const ray &r, int depth, const hittable &world) const
   {
     if (depth <= 0)
-      return color(255, 0, 0);
+      return color(0, 0, 0);
 
     hit_record rec;
     // If the ray hits nothing, return the background color.
     if (!world.hit(r, interval(0.001, infinity), rec))
-    {
-      vec3 dir = unit_vector(r.direction());
-      float phi = atan2(dir.z(), dir.x()); // Angle around the vertical axis
-      float theta = asin(dir.y());         // Angle above/below the horizon
-
-      // Normalize phi and theta to [0, 1] range for texture mapping
-      float u = 1 - (phi + M_PI) / (2 * M_PI); // Map to [0, 1]
-      float v = (theta + M_PI / 2) / M_PI;     // Map to [0, 1]
-      return background->value(u, v, dir);
-    }
+      return background;
 
     ray scattered;
     color attenuation;
@@ -255,9 +265,23 @@ private:
     if (!rec.mat->scatter(r, rec, attenuation, scattered))
       return color_from_emission;
 
-    color color_from_scatter = attenuation * ray_color(scattered, depth - 1, world, background);
+    color color_from_scatter = attenuation * ray_color(scattered, depth - 1, world);
 
     return color_from_emission + color_from_scatter;
+  }
+
+  void write_image(const std::vector<color> &image_data)
+  {
+    std::cout << "P3\n"
+              << image_width << ' ' << image_height << "\n255\n";
+    for (int j = 0; j < image_height; ++j)
+    {
+      for (int i = 0; i < image_width; ++i)
+      {
+        write_color(std::cout, image_data[j * image_width + i]);
+      }
+    }
+    std::clog << "\rDone.                 \n";
   }
 };
 
