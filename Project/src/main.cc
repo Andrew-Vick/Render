@@ -10,6 +10,8 @@
 //==============================================================================================
 
 #include "rtweekend.h"
+#include <array>
+#include <optional>
 
 #include "bvh.h"
 #include "camera.h"
@@ -80,9 +82,9 @@ void bouncing_spheres()
 
   cam.aspect_ratio = 16.0 / 9.0;
   cam.image_width = 400;
-  cam.samples_per_pixel = 100;
+  cam.samples_per_pixel = 50;
   cam.max_depth = 50;
-  cam.background = color(0.70, 0.80, 1.00);
+  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)));
 
   cam.vfov = 20;
   cam.lookfrom = point3(13, 2, 3);
@@ -110,7 +112,7 @@ void checkered_spheres()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  cam.background = color(0.70, 0.80, 1.00);
+  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)));
 
   cam.vfov = 20;
   cam.lookfrom = point3(13, 2, 3);
@@ -134,7 +136,7 @@ void earth()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  cam.background = color(0.70, 0.80, 1.00);
+  //cam.background = color(0.70, 0.80, 1.00);
 
   cam.vfov = 20;
   cam.lookfrom = point3(0, 0, 12);
@@ -160,7 +162,7 @@ void perlin_spheres()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  cam.background = color(0.70, 0.80, 1.00);
+  //cam.background = color(0.70, 0.80, 1.00);
 
   cam.vfov = 20;
   cam.lookfrom = point3(13, 2, 3);
@@ -196,7 +198,7 @@ void quads()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  cam.background = color(0.70, 0.80, 1.00);
+  //cam.background = color(0.70, 0.80, 1.00);
 
   cam.vfov = 80;
   cam.lookfrom = point3(0, 0, 9);
@@ -226,7 +228,7 @@ void simple_light()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  cam.background = color(0, 0, 0);
+  //cam.background = color(0, 0, 0);
 
   cam.vfov = 20;
   cam.lookfrom = point3(26, 3, 6);
@@ -270,7 +272,7 @@ void cornell_box()
   cam.image_width = 600;
   cam.samples_per_pixel = 200;
   cam.max_depth = 50;
-  cam.background = color(0, 0, 0);
+  //cam.background = color(0, 0, 0);
 
   cam.vfov = 40;
   cam.lookfrom = point3(278, 278, -800);
@@ -315,7 +317,7 @@ void cornell_smoke()
   cam.image_width = 600;
   cam.samples_per_pixel = 200;
   cam.max_depth = 50;
-  cam.background = color(0, 0, 0);
+  //cam.background = color(0, 0, 0);
 
   cam.vfov = 40;
   cam.lookfrom = point3(278, 278, -800);
@@ -395,7 +397,7 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
   cam.image_width = image_width;
   cam.samples_per_pixel = samples_per_pixel;
   cam.max_depth = max_depth;
-  cam.background = color(0, 0, 0);
+  //cam.background = color(0, 0, 0);
 
   cam.vfov = 40;
   cam.lookfrom = point3(478, 278, -600);
@@ -404,6 +406,52 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
 
   cam.defocus_angle = 0;
 
+  cam.render(world);
+}
+
+void cube_map_test()
+{
+  hittable_list world;
+
+  // Define cubemap faces
+  std::array<std::string, 6> cubemap_faces = {
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/px.hdr", // +X
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/nx.hdr", // -X
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/py.hdr", // +Y
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/ny.hdr", // -Y
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/pz.hdr", // +Z
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/nz.hdr"  // -Z
+  };
+
+  // Create the cubemap texture from the 6 faces
+  auto cubemap_texture = std::make_shared<cube_map_texture>(cubemap_faces);
+
+  // Add objects to the scene
+  auto metal_material = make_shared<metal>(color(0.8, 0.8, 0.9), 0.0);
+  world.add(make_shared<sphere>(point3(-1, 0, 0), 1.0, metal_material));
+
+  auto glass_material = make_shared<dielectric>(1.5);
+  world.add(make_shared<sphere>(point3(1, 0, 0), 1.0, glass_material));
+
+  // Set up the camera
+  camera cam;
+
+  cam.aspect_ratio = 1.0;
+  cam.image_width = 400;
+  cam.samples_per_pixel = 100;
+  cam.max_depth = 50;
+
+  // Set the background to the cubemap texture
+  cam.set_background(cubemap_texture);
+
+  cam.vfov = 90;
+  cam.lookfrom = point3(0, 0, 5);
+  cam.lookat = point3(0, 0, 0);
+  cam.vup = vec3(0, 1, 0);
+
+  cam.defocus_angle = 0;
+
+  // Render the scene
   cam.render(world);
 }
 
@@ -444,6 +492,9 @@ int main(int arg, char *argv[])
     break;
   case 10:
     final_scene(400, 250, 4);
+    break;
+  case 11:
+    cube_map_test();
     break;
   }
 }

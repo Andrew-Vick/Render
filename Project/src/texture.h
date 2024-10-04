@@ -13,6 +13,7 @@
 
 #include "perlin.h"
 #include "rtw_stb_image.h"
+#include <array>
 
 class texture
 {
@@ -20,6 +21,13 @@ public:
   virtual ~texture() = default;
 
   virtual color value(double u, double v, const point3 &p) const = 0;
+
+  // New overload for sampling based on direction
+  virtual color value(const vec3 &direction) const
+  {
+    // Default implementation returns black
+    return color(0, 0, 0);
+  }
 };
 
 class solid_color : public texture
@@ -64,6 +72,33 @@ private:
   shared_ptr<texture> odd;
 };
 
+// class image_texture : public texture
+// {
+// public:
+//   image_texture(const char *filename) : image(filename) {}
+
+//   color value(double u, double v, const point3 &p) const override
+//   {
+//     // If we have no texture data, then return solid cyan as a debugging aid.
+//     if (image.height() <= 0)
+//       return color(0, 1, 1);
+
+//     // Clamp input texture coordinates to [0,1] x [1,0]
+//     u = interval(0, 1).clamp(u);
+//     v = 1.0 - interval(0, 1).clamp(v); // Flip V to image coordinates
+
+//     auto i = int(u * image.width());
+//     auto j = int(v * image.height());
+//     auto pixel = image.pixel_data(i, j);
+
+//     auto color_scale = 1.0 / 255.0;
+//     return color(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
+//   }
+
+// private:
+//   rtw_image image;
+// };
+
 class image_texture : public texture
 {
 public:
@@ -71,20 +106,21 @@ public:
 
   color value(double u, double v, const point3 &p) const override
   {
-    // If we have no texture data, then return solid cyan as a debugging aid.
     if (image.height() <= 0)
-      return color(0, 1, 1);
+      return color(0, 1, 1); // Debugging aid
 
-    // Clamp input texture coordinates to [0,1] x [1,0]
     u = interval(0, 1).clamp(u);
     v = 1.0 - interval(0, 1).clamp(v); // Flip V to image coordinates
 
-    auto i = int(u * image.width());
-    auto j = int(v * image.height());
-    auto pixel = image.pixel_data(i, j);
+    int i = static_cast<int>(u * image.width());
+    int j = static_cast<int>(v * image.height());
 
-    auto color_scale = 1.0 / 255.0;
-    return color(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
+    i = std::min(i, image.width() - 1);
+    j = std::min(j, image.height() - 1);
+
+    const float *pixel = image.pixel_data(i, j);
+
+    return color(pixel[0], pixel[1], pixel[2]);
   }
 
 private:
@@ -105,5 +141,112 @@ private:
   perlin noise;
   double scale;
 };
+
+class cube_map_texture : public texture
+{
+public:
+  explicit cube_map_texture(const std::array<std::string, 6> &filenames)
+  {
+    for (int i = 0; i < 6; ++i)
+    {
+      faces[i] = std::make_unique<rtw_image>(filenames[i].c_str());
+    }
+  }
+
+  color value(const vec3 &direction) const override
+  {
+    vec3 dir = unit_vector(direction);
+    int face_index;
+    double u, v;
+    get_cube_face_and_uv(dir, face_index, u, v);
+    return sample_face(*faces[face_index], u, v);
+  }
+
+  // Implement the pure virtual method from the base class
+  color value(double u, double v, const point3 &p) const override
+  {
+    // This method is not used for cube maps, so we can return a default color or handle it appropriately
+    return color(0, 0, 0);
+  }
+
+private:
+  std::array<std::unique_ptr<rtw_image>, 6> faces;
+
+  void get_cube_face_and_uv(const vec3 &dir, int &face_index, double &u, double &v) const
+  {
+    double abs_x = fabs(dir.x());
+    double abs_y = fabs(dir.y());
+    double abs_z = fabs(dir.z());
+
+    int is_x_positive = dir.x() > 0 ? 1 : 0;
+    int is_y_positive = dir.y() > 0 ? 1 : 0;
+    int is_z_positive = dir.z() > 0 ? 1 : 0;
+
+    double max_axis, uc, vc;
+
+    if (is_x_positive && abs_x >= abs_y && abs_x >= abs_z)
+    {
+      max_axis = abs_x;
+      uc = -dir.z();
+      vc = dir.y();
+      face_index = 0; // Right
+    }
+    else if (!is_x_positive && abs_x >= abs_y && abs_x >= abs_z)
+    {
+      max_axis = abs_x;
+      uc = dir.z();
+      vc = dir.y();
+      face_index = 1; // Left
+    }
+    else if (is_y_positive && abs_y >= abs_x && abs_y >= abs_z)
+    {
+      max_axis = abs_y;
+      uc = dir.x();
+      vc = -dir.z();
+      face_index = 2; // Top
+    }
+    else if (!is_y_positive && abs_y >= abs_x && abs_y >= abs_z)
+    {
+      max_axis = abs_y;
+      uc = dir.x();
+      vc = dir.z();
+      face_index = 3; // Bottom
+    }
+    else if (is_z_positive && abs_z >= abs_x && abs_z >= abs_y)
+    {
+      max_axis = abs_z;
+      uc = dir.x();
+      vc = dir.y();
+      face_index = 4; // Front
+    }
+    else
+    {
+      max_axis = abs_z;
+      uc = -dir.x();
+      vc = dir.y();
+      face_index = 5; // Back
+    }
+
+    u = 0.5f * (uc / max_axis + 1.0f);
+    v = 0.5f * (vc / max_axis + 1.0f);
+  }
+
+  color sample_face(const rtw_image &image, double u, double v) const
+  {
+    u = interval(0, 1).clamp(u);
+    v = interval(0, 1).clamp(v);
+
+    int i = static_cast<int>(u * image.width());
+    int j = static_cast<int>((1 - v) * image.height());
+
+    i = std::min(i, image.width() - 1);
+    j = std::min(j, image.height() - 1);
+
+    const float *pixel = image.pixel_data(i, j);
+
+    return color(pixel[0], pixel[1], pixel[2]);
+  }
+};
+
 
 #endif

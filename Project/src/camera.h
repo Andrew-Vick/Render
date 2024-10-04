@@ -25,7 +25,6 @@ public:
   int image_width = 100;      // Rendered image width in pixel count
   int samples_per_pixel = 10; // Count for random samples for each pixel
   int max_depth = 10;         // Maximum number of ray bounces into scene
-  color background;           // Scene background color
 
   double vfov = 90;                  // Vertical field-of-view in degrees
   point3 lookfrom = point3(0, 0, 0); // Point camera is looking from
@@ -34,6 +33,11 @@ public:
 
   double defocus_angle = 0; // Variation angle of rays through each pixel
   double focus_dist = 10;   // Distance from camera lookfrom point to plane of perfect focus
+
+  void set_background(shared_ptr<texture> bg_tex)
+  {
+    background = bg_tex;
+  }
 
   /**
    * OLD RENDER CHUNK METHOD -- MULTI THREAD
@@ -178,9 +182,10 @@ private:
   vec3 pixel_delta_u;         // Offset to pixel to the right
   vec3 pixel_delta_v;         // Offset to pixel below
   vec3 u, v, w;               // Camera frame basis vectors
+  vec3 defocus_disk_u;        // Defocus disk horizontal radius
+  vec3 defocus_disk_v;        // Defocus disk vertical radius
 
-  vec3 defocus_disk_u; // Defocus disk horizontal radius
-  vec3 defocus_disk_v; // Defocus disk vertical radius
+  shared_ptr<texture> background;
 
   void initialize()
   {
@@ -251,12 +256,18 @@ private:
   color ray_color(const ray &r, int depth, const hittable &world) const
   {
     if (depth <= 0)
-      return color(0, 0, 0);
+      return color(0.0, 0.0, 0.0);
 
     hit_record rec;
     // If the ray hits nothing, return the background color.
     if (!world.hit(r, interval(0.001, infinity), rec))
-      return background;
+    {
+      if (background)
+      {
+        return background->value(unit_vector(r.direction()));
+      }
+      return color(0.0, 0.0, 0.0); // Return black if no background texture is set
+    }
 
     ray scattered;
     color attenuation;
@@ -268,20 +279,6 @@ private:
     color color_from_scatter = attenuation * ray_color(scattered, depth - 1, world);
 
     return color_from_emission + color_from_scatter;
-  }
-
-  void write_image(const std::vector<color> &image_data)
-  {
-    std::cout << "P3\n"
-              << image_width << ' ' << image_height << "\n255\n";
-    for (int j = 0; j < image_height; ++j)
-    {
-      for (int i = 0; i < image_width; ++i)
-      {
-        write_color(std::cout, image_data[j * image_width + i]);
-      }
-    }
-    std::clog << "\rDone.                 \n";
   }
 };
 
