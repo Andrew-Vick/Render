@@ -34,8 +34,11 @@ public:
   double defocus_angle = 0; // Variation angle of rays through each pixel
   double focus_dist = 10;   // Distance from camera lookfrom point to plane of perfect focus
 
-  void set_background(shared_ptr<texture> bg_tex)
+  bool is_hdr = false;
+
+  void set_background(shared_ptr<texture> bg_tex, bool hdr)
   {
+    is_hdr = hdr;
     background = bg_tex;
   }
 
@@ -264,9 +267,12 @@ private:
     {
       if (background)
       {
-        return background->value(unit_vector(r.direction()));
+        if(is_hdr){
+          return background->value(unit_vector(r.direction()));
+        }
+        return background->value(0, 0, r.direction());
       }
-      return color(0.0, 0.0, 0.0); // Return black if no background texture is set
+      color(0.0, 0.0, 0.0); // Return black if no background texture is set
     }
 
     ray scattered;

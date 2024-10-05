@@ -84,7 +84,7 @@ void bouncing_spheres()
   cam.image_width = 400;
   cam.samples_per_pixel = 50;
   cam.max_depth = 50;
-  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)));
+  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)), false);
 
   cam.vfov = 20;
   cam.lookfrom = point3(13, 2, 3);
@@ -112,7 +112,7 @@ void checkered_spheres()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)));
+  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)), false);
 
   cam.vfov = 20;
   cam.lookfrom = point3(13, 2, 3);
@@ -136,7 +136,7 @@ void earth()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  //cam.background = color(0.70, 0.80, 1.00);
+  cam.set_background(make_shared<solid_color>(color(0.70, 0.80, 1.00)), false);
 
   cam.vfov = 20;
   cam.lookfrom = point3(0, 0, 12);
@@ -272,7 +272,7 @@ void cornell_box()
   cam.image_width = 600;
   cam.samples_per_pixel = 200;
   cam.max_depth = 50;
-  //cam.background = color(0, 0, 0);
+  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 40;
   cam.lookfrom = point3(278, 278, -800);
@@ -436,13 +436,13 @@ void cube_map_test()
   // Set up the camera
   camera cam;
 
-  cam.aspect_ratio = 1.0;
-  cam.image_width = 400;
-  cam.samples_per_pixel = 100;
+  cam.aspect_ratio = 16.0/9.0;
+  cam.image_width = 1080;
+  cam.samples_per_pixel = 1000;
   cam.max_depth = 50;
 
   // Set the background to the cubemap texture
-  cam.set_background(cubemap_texture);
+  cam.set_background(cubemap_texture, true);
 
   cam.vfov = 90;
   cam.lookfrom = point3(0, 0, 5);
