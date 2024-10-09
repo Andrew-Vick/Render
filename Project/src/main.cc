@@ -417,12 +417,12 @@ void cube_map_test()
 
   // Define cubemap faces
   std::array<std::string, 6> cubemap_faces = {
-      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/px.hdr", // +X
-      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/nx.hdr", // -X
-      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/py.hdr", // +Y
-      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/ny.hdr", // -Y
-      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/pz.hdr", // +Z
-      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/gum_trees_4k/nz.hdr"  // -Z
+      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\px.hdr", // +X
+      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\nx.hdr", // -X
+      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\py.hdr", // +Y
+      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\ny.hdr", // -Y
+      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\pz.hdr", // +Z
+      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\nz.hdr"  // -Z
   };
 
   // Create the cubemap texture from the 6 faces
@@ -446,8 +446,8 @@ void cube_map_test()
 
   cam.aspect_ratio = 16.0/9.0;
   cam.image_width = 2560;
-  cam.samples_per_pixel = 10000;
-  cam.max_depth = 4;
+  cam.samples_per_pixel = 1000;
+  cam.max_depth = 10;
 
   // Set the background to the cubemap texture
   cam.set_background(cubemap_texture, true);

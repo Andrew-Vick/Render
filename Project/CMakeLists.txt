@@ -28,6 +28,6 @@ set ( SOURCE_ONE_WEEKEND
 include_directories(src)
 
 # Set the build type to Release
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 add_executable(inOneWeekend ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
