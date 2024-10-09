@@ -318,6 +318,7 @@ void cornell_smoke()
   cam.samples_per_pixel = 200;
   cam.max_depth = 50;
   //cam.background = color(0, 0, 0);
+  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 40;
   cam.lookfrom = point3(278, 278, -800);
@@ -398,6 +399,7 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
   cam.samples_per_pixel = samples_per_pixel;
   cam.max_depth = max_depth;
   //cam.background = color(0, 0, 0);
+  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 40;
   cam.lookfrom = point3(478, 278, -600);
@@ -426,26 +428,32 @@ void cube_map_test()
   // Create the cubemap texture from the 6 faces
   auto cubemap_texture = std::make_shared<cube_map_texture>(cubemap_faces);
 
+  // auto emat = make_shared<lambertian>(make_shared<cube_map_texture>(cubemap_faces));
+  // world.add(make_shared<sphere>(point3(0, 2, -1), 100, emat));
+
+  // auto light = make_shared<diffuse_light>(color(7.0, 7.0, 7.0));
+  // world.add(make_shared<quad>(point3(-5, 5, 0), vec3(-5, 0, 0), vec3(0, 0, 5), light));
+
   // Add objects to the scene
   auto metal_material = make_shared<metal>(color(0.8, 0.8, 0.9), 0.0);
-  world.add(make_shared<sphere>(point3(-1, 0, 0), 1.0, metal_material));
+  world.add(make_shared<sphere>(point3(-5, 0, 0), 5.0, metal_material));
 
   auto glass_material = make_shared<dielectric>(1.5);
-  world.add(make_shared<sphere>(point3(1, 0, 0), 1.0, glass_material));
+  world.add(make_shared<sphere>(point3(5, 0, 0), 5.0, glass_material));
 
   // Set up the camera
   camera cam;
 
   cam.aspect_ratio = 16.0/9.0;
-  cam.image_width = 1080;
-  cam.samples_per_pixel = 1000;
-  cam.max_depth = 50;
+  cam.image_width = 2560;
+  cam.samples_per_pixel = 10000;
+  cam.max_depth = 4;
 
   // Set the background to the cubemap texture
   cam.set_background(cubemap_texture, true);
 
   cam.vfov = 90;
-  cam.lookfrom = point3(0, 0, 5);
+  cam.lookfrom = point3(0, 0, 10);
   cam.lookat = point3(0, 0, 0);
   cam.vup = vec3(0, 1, 0);
 
