@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "hittable.h"
+#include "pdf.h"
 #include "material.h"
 
 /**
@@ -42,47 +43,21 @@ public:
     background = bg_tex;
   }
 
-  /**
-   * OLD RENDER CHUNK METHOD -- MULTI THREAD
-   * may not need this
-   */
-  // void render_chunk(const hittable& world, int start_row, int end_row, std::vector<color> &image_data)
-  // {
-  //   for (int j = start_row; j < end_row; ++j)
-  //   {
-  //     for (int i = 0; i < image_width; ++i)
-  //     {
-  //       color pixel_color(0, 0, 0);
-  //       for (int s = 0; s < samples_per_pixel; ++s)
-  //       {
-  //         auto u = (i + random_double()) / (image_width - 1);
-  //         auto v = (j + random_double()) / (image_height - 1);
-  //         ray r = get_ray(u, v);
-  //         pixel_color += ray_color(r, max_depth, world);
-  //       }
-  //       image_data[j * image_width + i] = pixel_color;
-  //     }
-  //   }
-  // }
-
+  
   /**
    * ORIGINAL RENDER METHOD -- SINGLE THREAD
    */
   // void render(const hittable &world)
   // {
   //   initialize();
-
   //   std::cout << "P3\n"
   //             << image_width << ' ' << image_height << "\n255\n";
-
   //   for (int j = 0; j < image_height; j++)
   //   {
   //     std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
   //     for (int i = 0; i < image_width; i++)
   //     {
-
   //       color pixel_color(0, 0, 0); // CHANGING VALUES HERE GIVE A HUE
-
   //       for (int sample = 0; sample < samples_per_pixel; sample++)
   //       {
   //         ray r = get_ray(i, j);
@@ -91,7 +66,6 @@ public:
   //       write_color(std::cout, pixel_samples_scale * pixel_color);
   //     }
   //   }
-
   //   std::clog << "\rDone.                 \n";
   // }
 
@@ -118,16 +92,17 @@ public:
   std::mutex output_mutex;
   std::atomic<int> lines_rendered{0};
 
-  void render(const hittable &world)
+  void render(const hittable &world, const hittable& lights)
   {
     initialize();
 
     int num_threads = std::thread::hardware_concurrency();
     int rows_per_thread = image_height / num_threads;
 
-    std::vector<std::future<void>> futures;
+    // Create the raster buffer to hold the image data
     std::vector<color> image_data(image_width * image_height);
 
+    // Lambda function to render a chunk of rows
     auto render_chunk = [&](int start_row, int end_row)
     {
       for (int j = start_row; j < end_row; ++j)
@@ -135,13 +110,18 @@ public:
         for (int i = 0; i < image_width; ++i)
         {
           color pixel_color(0, 0, 0);
-          for (int sample = 0; sample < samples_per_pixel; ++sample)
+          for (int s_j = 0; s_j < sqrt_spp; s_j++)
           {
-            ray r = get_ray(i, j);
-            pixel_color += ray_color(r, max_depth, world);
+            for (int s_i = 0; s_i < sqrt_spp; s_i++)
+            {
+              ray r = get_ray(i, j, s_i, s_j);
+              pixel_color += ray_color(r, max_depth, world, lights);
+            }
           }
           image_data[j * image_width + i] = pixel_samples_scale * pixel_color;
         }
+
+        // Progress output for completed lines
         lines_rendered++;
         {
           std::lock_guard<std::mutex> lock(output_mutex);
@@ -151,19 +131,22 @@ public:
       }
     };
 
+    // Launch threads to render the chunks of the image
+    std::vector<std::future<void>> futures;
     for (int t = 0; t < num_threads; ++t)
     {
       int start_row = t * rows_per_thread;
       int end_row = (t == num_threads - 1) ? image_height : start_row + rows_per_thread;
-
       futures.push_back(std::async(std::launch::async, render_chunk, start_row, end_row));
     }
 
+    // Wait for all threads to finish rendering
     for (auto &future : futures)
     {
       future.get();
     }
 
+    // After rendering, output the rasterized image to a file (or console)
     std::cout << "P3\n"
               << image_width << ' ' << image_height << "\n255\n";
     for (int j = 0; j < image_height; ++j)
@@ -180,6 +163,9 @@ private:
   /* Private Camera Variables Here */
   int image_height;           // Rendered image height
   double pixel_samples_scale; // Color scale factor for a sum of pixel samples
+  int sqrt_spp;
+  double recip_sqrt_spp;
+
   point3 center;              // Camera center
   point3 pixel00_loc;         // Location of pixel 0, 0
   vec3 pixel_delta_u;         // Offset to pixel to the right
@@ -195,7 +181,9 @@ private:
     image_height = int(image_width / aspect_ratio);
     image_height = (image_height < 1) ? 1 : image_height;
 
-    pixel_samples_scale = 1.0 / samples_per_pixel;
+    sqrt_spp = int(std::sqrt(samples_per_pixel));
+    pixel_samples_scale = 1.0 / (sqrt_spp * sqrt_spp);
+    recip_sqrt_spp = 1.0 / sqrt_spp;
 
     center = lookfrom;
 
@@ -227,12 +215,11 @@ private:
     defocus_disk_v = v * defocus_radius;
   }
 
-  ray get_ray(int i, int j) const
+  ray get_ray(int i, int j, int s_i, int s_j) const
   {
     // Construct a camera ray originating from the defocus disk and directed at a randomly
     // sampled point around the pixel location i, j.
-
-    auto offset = sample_square();
+    auto offset = sample_square_stratified(s_i, s_j);
     auto pixel_sample = pixel00_loc + ((i + offset.x()) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
 
     auto ray_origin = (defocus_angle <= 0) ? center : defocus_disk_sample();
@@ -241,6 +228,17 @@ private:
     auto ray_time = random_double();
 
     return ray(ray_origin, ray_direction, ray_time);
+  }
+
+  vec3 sample_square_stratified(int s_i, int s_j) const
+  {
+    // Returns the vector to a random point in the square sub-pixel specified by grid
+    // indices s_i and s_j, for an idealized unit square pixel [-.5,-.5] to [+.5,+.5].
+
+    auto px = ((s_i + random_double()) * recip_sqrt_spp) - 0.5;
+    auto py = ((s_j + random_double()) * recip_sqrt_spp) - 0.5;
+
+    return vec3(px, py, 0);
   }
 
   vec3 sample_square() const
@@ -256,7 +254,7 @@ private:
     return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
   }
 
-  color ray_color(const ray &r, int depth, const hittable &world) const
+  color ray_color(const ray &r, int depth, const hittable &world, const hittable &lights) const
   {
     if (depth <= 0)
       return color(0.0, 0.0, 0.0);
@@ -275,14 +273,28 @@ private:
       color(0.0, 0.0, 0.0); // Return black if no background texture is set
     }
 
-    ray scattered;
-    color attenuation;
-    color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
+    scatter_record srec;
+    color color_from_emission = rec.mat->emitted(r, rec, rec.u, rec.v, rec.p);
 
-    if (!rec.mat->scatter(r, rec, attenuation, scattered))
+    if (!rec.mat->scatter(r, rec, srec))
       return color_from_emission;
 
-    color color_from_scatter = attenuation * ray_color(scattered, depth - 1, world);
+    if (srec.skip_pdf)
+    {
+      return srec.attenuation * ray_color(srec.skip_pdf_ray, depth - 1, world, lights);
+    }
+
+    auto light_ptr = make_shared<hittable_pdf>(lights, rec.p);
+    mixture_pdf p(light_ptr, srec.pdf_ptr);
+
+    ray scattered = ray(rec.p, p.generate(), r.time());
+    auto pdf_value = p.value(scattered.direction());
+
+    double scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
+
+    color sample_color = ray_color(scattered, depth - 1, world, lights);
+    color color_from_scatter =
+        (srec.attenuation * scattering_pdf * sample_color) / pdf_value;
 
     return color_from_emission + color_from_scatter;
   }

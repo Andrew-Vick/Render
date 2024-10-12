@@ -94,7 +94,7 @@ void bouncing_spheres()
   cam.defocus_angle = 0.6;
   cam.focus_dist = 10.0;
 
-  cam.render(world);
+  //cam.render(world);
 }
 
 void checkered_spheres()
@@ -121,7 +121,7 @@ void checkered_spheres()
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  //cam.render(world);
 }
 
 void earth()
@@ -145,7 +145,7 @@ void earth()
 
   cam.defocus_angle = 0;
 
-  cam.render(hittable_list(globe));
+  //cam.render(hittable_list(globe));
 }
 
 void perlin_spheres()
@@ -171,7 +171,7 @@ void perlin_spheres()
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  //cam.render(world);
 }
 
 void quads()
@@ -207,7 +207,7 @@ void quads()
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  //cam.render(world);
 }
 
 void simple_light()
@@ -237,7 +237,7 @@ void simple_light()
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  //cam.render(world);
 }
 
 void cornell_box()
@@ -261,16 +261,21 @@ void cornell_box()
   box1 = make_shared<translate>(box1, vec3(265, 0, 295));
   world.add(box1);
 
-  shared_ptr<hittable> box2 = box(point3(0, 0, 0), point3(165, 165, 165), white);
-  box2 = make_shared<rotate_y>(box2, -18);
-  box2 = make_shared<translate>(box2, vec3(130, 0, 65));
-  world.add(box2);
+  // Glass Sphere
+  auto glass = make_shared<dielectric>(1.5);
+  world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
+
+  auto empty_material = shared_ptr<material>();
+  hittable_list lights;
+  lights.add(
+      make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
+  lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
 
   camera cam;
 
   cam.aspect_ratio = 1.0;
   cam.image_width = 600;
-  cam.samples_per_pixel = 200;
+  cam.samples_per_pixel = 1000;
   cam.max_depth = 50;
   cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
@@ -281,7 +286,7 @@ void cornell_box()
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  cam.render(world, lights);
 }
 
 void cornell_smoke()
@@ -327,7 +332,7 @@ void cornell_smoke()
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  ////cam.render(world);
 }
 
 void final_scene(int image_width, int samples_per_pixel, int max_depth)
@@ -408,7 +413,7 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
 
   cam.defocus_angle = 0;
 
-  cam.render(world);
+  //cam.render(world);
 }
 
 void cube_map_test()
@@ -417,36 +422,36 @@ void cube_map_test()
 
   // Define cubemap faces
   std::array<std::string, 6> cubemap_faces = {
-      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\px.hdr", // +X
-      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\nx.hdr", // -X
-      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\py.hdr", // +Y
-      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\ny.hdr", // -Y
-      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\pz.hdr", // +Z
-      "C:\\Users\\advic\\Render\\Project\\src\\Textures\\CubeMaps\\4k_cobble_hdr\\nz.hdr"  // -Z
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/4k_cobble_hdr/px.hdr", // +X
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/4k_cobble_hdr/nx.hdr", // -X
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/4k_cobble_hdr/py.hdr", // +Y
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/4k_cobble_hdr/ny.hdr", // -Y
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/4k_cobble_hdr/pz.hdr", // +Z
+      "/Users/andrewvick/Coms336/Project/src/Textures/CubeMaps/4k_cobble_hdr/nz.hdr"  // -Z
   };
 
   // Create the cubemap texture from the 6 faces
   auto cubemap_texture = std::make_shared<cube_map_texture>(cubemap_faces);
 
-  // auto emat = make_shared<lambertian>(make_shared<cube_map_texture>(cubemap_faces));
-  // world.add(make_shared<sphere>(point3(0, 2, -1), 100, emat));
-
-  // auto light = make_shared<diffuse_light>(color(7.0, 7.0, 7.0));
-  // world.add(make_shared<quad>(point3(-5, 5, 0), vec3(-5, 0, 0), vec3(0, 0, 5), light));
-
   // Add objects to the scene
   auto metal_material = make_shared<metal>(color(0.8, 0.8, 0.9), 0.0);
-  world.add(make_shared<sphere>(point3(-5, 0, 0), 5.0, metal_material));
+  world.add(make_shared<sphere>(point3(-4.5, 0, 0), 5.0, metal_material));
 
   auto glass_material = make_shared<dielectric>(1.5);
-  world.add(make_shared<sphere>(point3(5, 0, 0), 5.0, glass_material));
+  world.add(make_shared<sphere>(point3(4.5, 0, 0), 5.0, glass_material));
+
+  auto empty_material = shared_ptr<material>();
+  hittable_list lights;
+  // lights.add(
+  //     make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
+  // lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
 
   // Set up the camera
   camera cam;
 
   cam.aspect_ratio = 16.0/9.0;
   cam.image_width = 2560;
-  cam.samples_per_pixel = 1000;
+  cam.samples_per_pixel = 10;
   cam.max_depth = 10;
 
   // Set the background to the cubemap texture
@@ -460,7 +465,7 @@ void cube_map_test()
   cam.defocus_angle = 0;
 
   // Render the scene
-  cam.render(world);
+  cam.render(world, lights);
 }
 
 int main(int arg, char *argv[])
