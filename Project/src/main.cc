@@ -22,6 +22,7 @@
 #include "quad.h"
 #include "sphere.h"
 #include "texture.h"
+#include "mesh_import.h"
 
 void bouncing_spheres()
 {
@@ -94,7 +95,7 @@ void bouncing_spheres()
   cam.defocus_angle = 0.6;
   cam.focus_dist = 10.0;
 
-  //cam.render(world);
+  // cam.render(world);
 }
 
 void checkered_spheres()
@@ -121,7 +122,7 @@ void checkered_spheres()
 
   cam.defocus_angle = 0;
 
-  //cam.render(world);
+  // cam.render(world);
 }
 
 void earth()
@@ -145,7 +146,7 @@ void earth()
 
   cam.defocus_angle = 0;
 
-  //cam.render(hittable_list(globe));
+  // cam.render(hittable_list(globe));
 }
 
 void perlin_spheres()
@@ -162,7 +163,7 @@ void perlin_spheres()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  //cam.background = color(0.70, 0.80, 1.00);
+  // cam.background = color(0.70, 0.80, 1.00);
 
   cam.vfov = 20;
   cam.lookfrom = point3(13, 2, 3);
@@ -171,7 +172,7 @@ void perlin_spheres()
 
   cam.defocus_angle = 0;
 
-  //cam.render(world);
+  // cam.render(world);
 }
 
 void quads()
@@ -198,7 +199,7 @@ void quads()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  //cam.background = color(0.70, 0.80, 1.00);
+  // cam.background = color(0.70, 0.80, 1.00);
 
   cam.vfov = 80;
   cam.lookfrom = point3(0, 0, 9);
@@ -207,7 +208,7 @@ void quads()
 
   cam.defocus_angle = 0;
 
-  //cam.render(world);
+  // cam.render(world);
 }
 
 void simple_light()
@@ -228,7 +229,7 @@ void simple_light()
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  //cam.background = color(0, 0, 0);
+  // cam.background = color(0, 0, 0);
 
   cam.vfov = 20;
   cam.lookfrom = point3(26, 3, 6);
@@ -237,56 +238,60 @@ void simple_light()
 
   cam.defocus_angle = 0;
 
-  //cam.render(world);
+  // cam.render(world);
 }
-
 void cornell_box()
 {
-  hittable_list world;
+hittable_list world;
 
-  auto red = make_shared<lambertian>(color(.65, .05, .05));
-  auto white = make_shared<lambertian>(color(.73, .73, .73));
-  auto green = make_shared<lambertian>(color(.12, .45, .15));
-  auto light = make_shared<diffuse_light>(color(15, 15, 15));
+auto red = make_shared<lambertian>(color(.65, .05, .05));
+auto white = make_shared<lambertian>(color(.73, .73, .73));
+auto green = make_shared<lambertian>(color(.12, .45, .15));
+auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
-  world.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), green));
-  world.add(make_shared<quad>(point3(0, 0, 0), vec3(0, 555, 0), vec3(0, 0, 555), red));
-  world.add(make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), light));
-  world.add(make_shared<quad>(point3(0, 0, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
-  world.add(make_shared<quad>(point3(555, 555, 555), vec3(-555, 0, 0), vec3(0, 0, -555), white));
-  world.add(make_shared<quad>(point3(0, 0, 555), vec3(555, 0, 0), vec3(0, 555, 0), white));
+// Cornell box sides
+world.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 0, 555), vec3(0, 555, 0), green));
+world.add(make_shared<quad>(point3(0, 0, 555), vec3(0, 0, -555), vec3(0, 555, 0), red));
+world.add(make_shared<quad>(point3(0, 555, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
+world.add(make_shared<quad>(point3(0, 0, 555), vec3(555, 0, 0), vec3(0, 0, -555), white));
+world.add(make_shared<quad>(point3(555, 0, 555), vec3(-555, 0, 0), vec3(0, 555, 0), white));
 
-  shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), white);
-  box1 = make_shared<rotate_y>(box1, 15);
-  box1 = make_shared<translate>(box1, vec3(265, 0, 295));
-  world.add(box1);
+// Light
+world.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
 
-  // Glass Sphere
-  auto glass = make_shared<dielectric>(1.5);
-  world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
+// Box
+shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), white);
+box1 = make_shared<rotate_y>(box1, 15);
+box1 = make_shared<translate>(box1, vec3(265, 0, 295));
+world.add(box1);
 
-  auto empty_material = shared_ptr<material>();
-  hittable_list lights;
-  lights.add(
-      make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
-  lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
+// Glass Sphere
+auto glass = make_shared<dielectric>(1.5);
+world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
 
-  camera cam;
+// Light Sources
+auto empty_material = shared_ptr<material>();
+hittable_list lights;
+lights.add(
+    make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
+lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
 
-  cam.aspect_ratio = 1.0;
-  cam.image_width = 600;
-  cam.samples_per_pixel = 1000;
-  cam.max_depth = 50;
-  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
+camera cam;
 
-  cam.vfov = 40;
-  cam.lookfrom = point3(278, 278, -800);
-  cam.lookat = point3(278, 278, 0);
-  cam.vup = vec3(0, 1, 0);
+cam.aspect_ratio = 1.0;
+cam.image_width = 600;
+cam.samples_per_pixel = 100;
+cam.max_depth = 50;
+cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
-  cam.defocus_angle = 0;
+cam.vfov = 40;
+cam.lookfrom = point3(278, 278, -800);
+cam.lookat = point3(278, 278, 0);
+cam.vup = vec3(0, 1, 0);
 
-  cam.render(world, lights);
+cam.defocus_angle = 0;
+
+cam.render(world, lights);
 }
 
 void cornell_smoke()
@@ -322,7 +327,7 @@ void cornell_smoke()
   cam.image_width = 600;
   cam.samples_per_pixel = 200;
   cam.max_depth = 50;
-  //cam.background = color(0, 0, 0);
+  // cam.background = color(0, 0, 0);
   cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 40;
@@ -403,7 +408,7 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
   cam.image_width = image_width;
   cam.samples_per_pixel = samples_per_pixel;
   cam.max_depth = max_depth;
-  //cam.background = color(0, 0, 0);
+  // cam.background = color(0, 0, 0);
   cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 40;
@@ -413,7 +418,7 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
 
   cam.defocus_angle = 0;
 
-  //cam.render(world);
+  // cam.render(world);
 }
 
 void cube_map_test()
@@ -449,7 +454,7 @@ void cube_map_test()
   // Set up the camera
   camera cam;
 
-  cam.aspect_ratio = 16.0/9.0;
+  cam.aspect_ratio = 16.0 / 9.0;
   cam.image_width = 2560;
   cam.samples_per_pixel = 10;
   cam.max_depth = 10;
@@ -468,9 +473,65 @@ void cube_map_test()
   cam.render(world, lights);
 }
 
+void triangle_mesh_test_scene()
+{
+  hittable_list world;
+  std::vector<shared_ptr<hittable>> triangles;
+
+  auto red = make_shared<lambertian>(color(1.0, 0.0, 0.0));
+
+  // Import a triangle mesh using MeshImporter (e.g., some .obj file)
+  std::vector<Mesh> meshes;
+  if (MeshImporter::LoadMesh("/Users/andrewvick/Coms336/Project/src/Textures/meshes/vaze3.OBJ", meshes))
+  {
+    MeshImporter importer;
+    for (const auto &mesh : meshes)
+    {
+      importer.convertMeshToTriangles(mesh, triangles, red);
+    }
+
+    // Add all triangles to the world
+    for (auto &tri : triangles)
+    {
+      if (tri)
+      {
+        world.add(make_shared<bvh_node>(tri));
+      }
+      else
+      {
+        std::cerr << "null triangle skipped!" << std::endl;
+      }
+    }
+  }
+  else
+  {
+    std::cerr << "Failed to load the mesh!" << std::endl;
+    return;
+  }
+
+  auto empty_material = shared_ptr<material>();
+  hittable_list lights;
+  lights.add(make_shared<sphere>(point3(0, 5, 5), 1, empty_material));
+
+  camera cam;
+  cam.aspect_ratio = 1.0;
+  cam.image_width = 500;
+  cam.samples_per_pixel = 10;
+  cam.max_depth = 50;
+  cam.set_background(make_shared<solid_color>(color(1.0, 1.0, 1.0)), false);
+
+  cam.vfov = 90;
+  cam.lookfrom = point3(3, 2, 3); // Camera inside the room looking toward the door
+  cam.lookat = point3(0, 0, 0);   // Looking at the door
+  cam.vup = vec3(0, 1, 0);
+  cam.defocus_angle = 0;
+
+  // Render the scene
+  cam.render(world, lights);
+}
 int main(int arg, char *argv[])
 {
-  std::string command = "1";
+  std::string command = "12";
   if (arg >= 2)
     command = argv[1];
 
@@ -508,6 +569,9 @@ int main(int arg, char *argv[])
     break;
   case 11:
     cube_map_test();
+    break;
+  case 12:
+    triangle_mesh_test_scene();
     break;
   }
 }

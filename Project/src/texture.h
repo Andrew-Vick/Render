@@ -149,7 +149,7 @@ public:
   {
     for (int i = 0; i < 6; ++i)
     {
-      faces[i] = std::make_unique<rtw_image>(filenames[i].c_str());
+      faces[i] = make_unique<rtw_image>(filenames[i].c_str());
     }
   }
 

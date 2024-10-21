@@ -21,7 +21,7 @@ public:
         perlin_generate_perm(perm_y);
         perlin_generate_perm(perm_z);
     }
-
+    
     double noise(const point3 &p) const
     {
         auto u = p.x() - std::floor(p.x());

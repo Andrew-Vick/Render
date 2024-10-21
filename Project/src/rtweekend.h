@@ -39,6 +39,12 @@ inline int random_int(int min, int max) {
     return int(random_double(min, max+1));
 }
 
+template <typename T, typename... Args>
+std::unique_ptr<T> make_unique(Args &&...args)
+{
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
 // Common Headers
 
 #include "color.h"

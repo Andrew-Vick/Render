@@ -1,6 +1,8 @@
 #ifndef AABB_H
 #define AABB_H
 
+#include "rtweekend.h"
+
 class aabb {
   public:
     interval x, y, z;
@@ -27,6 +29,17 @@ class aabb {
         x = interval(box0.x, box1.x);
         y = interval(box0.y, box1.y);
         z = interval(box0.z, box1.z);
+    }
+
+    aabb pad()
+    {
+        // Return an AABB that has no side narrower than some delta, padding if necessary.
+        const double delta = 0.0001;
+        interval new_x = (x.size() >= delta) ? x : x.expand(delta);
+        interval new_y = (y.size() >= delta) ? y : y.expand(delta);
+        interval new_z = (z.size() >= delta) ? z : z.expand(delta);
+
+        return aabb(new_x, new_y, new_z);
     }
 
     const interval& axis_interval(int n) const {

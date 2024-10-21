@@ -47,7 +47,7 @@ public:
   /**
    * ORIGINAL RENDER METHOD -- SINGLE THREAD
    */
-  // void render(const hittable &world)
+  // void render(const hittable &world, const hittable &lights)
   // {
   //   initialize();
   //   std::cout << "P3\n"
@@ -57,11 +57,14 @@ public:
   //     std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
   //     for (int i = 0; i < image_width; i++)
   //     {
-  //       color pixel_color(0, 0, 0); // CHANGING VALUES HERE GIVE A HUE
-  //       for (int sample = 0; sample < samples_per_pixel; sample++)
+  //       color pixel_color(0, 0, 0);
+  //       for (int s_j = 0; s_j < sqrt_spp; s_j++)
   //       {
-  //         ray r = get_ray(i, j);
-  //         pixel_color += ray_color(r, max_depth, world);
+  //         for (int s_i = 0; s_i < sqrt_spp; s_i++)
+  //         {
+  //           ray r = get_ray(i, j, s_i, s_j);
+  //           pixel_color += ray_color(r, max_depth, world, lights);
+  //         }
   //       }
   //       write_color(std::cout, pixel_samples_scale * pixel_color);
   //     }
@@ -270,7 +273,7 @@ private:
         }
         return background->value(0, 0, r.direction());
       }
-      color(0.0, 0.0, 0.0); // Return black if no background texture is set
+      return color(0, 0, 0);
     }
 
     scatter_record srec;
