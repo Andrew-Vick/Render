@@ -5,7 +5,9 @@
 #include "hittable.h"
 #include "hittable_list.h"
 
+
 #include <algorithm>
+
 
 class bvh_node : public hittable
 {
@@ -52,6 +54,34 @@ public:
 
     }
 
+    // bvh_node(std::vector<shared_ptr<hittable>> &objects, size_t start, size_t end)
+    // {
+    //     bbox = compute_bounding_box(objects, start, end); // Precomputed bounding boxes
+
+    //     if (end - start <= 4)
+    //     {
+    //         // Create leaf node
+    //         left = right = objects[start];
+    //         return;
+    //     }
+
+    //     // Find the best split using SAH or another splitting heuristic
+    //     std::pair<size_t, int> result = find_best_split(objects, start, end);
+    //     size_t split = result.first;
+    //     int axis = result.second;
+
+    //     // Sort objects along the best axis
+    //     std::sort(std::begin(objects)+ start, std::begin(objects)+ end,
+    //               [axis](const shared_ptr<hittable> &a, const shared_ptr<hittable> &b)
+    //               {
+    //                   return a->bounding_box().axis_interval(axis).min < b->bounding_box().axis_interval(axis).min;
+    //               });
+
+    //     // Recursively build left and right subtrees sequentially
+    //     left = std::make_shared<bvh_node>(objects, start, split);
+    //     right = std::make_shared<bvh_node>(objects, split, end);
+    // }
+
     bool hit(const ray &r, interval ray_t, hit_record &rec) const override
     {
         if (!bbox.hit(r, ray_t))
@@ -91,6 +121,11 @@ private:
     static bool box_z_compare(const shared_ptr<hittable> a, const shared_ptr<hittable> b)
     {
         return box_compare(a, b, 2);
+    }
+
+    double sah_cost(int left_count, int right_count, double left_area, double right_area)
+    {
+        return left_count * left_area + right_count * right_area;
     }
 };
 

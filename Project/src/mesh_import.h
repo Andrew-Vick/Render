@@ -68,6 +68,7 @@ private:
             vertex.position[1] = ai_mesh->mVertices[i].y;
             vertex.position[2] = ai_mesh->mVertices[i].z;
 
+            // Check if the mesh contains normals if not set them to zero
             if (ai_mesh->HasNormals())
             {
                 vertex.normal[0] = ai_mesh->mNormals[i].x;
@@ -76,12 +77,12 @@ private:
             }
             else
             {
-                // If no normals, set default normal (optional)
                 vertex.normal[0] = 0.0f;
                 vertex.normal[1] = 0.0f;
                 vertex.normal[2] = 0.0f;
             }
 
+            // Check if the mesh contains texture coordinates if not set them to zero
             if (ai_mesh->HasTextureCoords(0))
             {
                 vertex.texCoords[0] = ai_mesh->mTextureCoords[0][i].x;
@@ -93,18 +94,24 @@ private:
                 vertex.texCoords[1] = 0.0f;
             }
 
+            // Add the vertex to the mesh
             mesh.vertices.push_back(vertex);
         }
 
         // Process indices
         for (unsigned int i = 0; i < ai_mesh->mNumFaces; i++)
         {
+            
+            // Get the face
             aiFace face = ai_mesh->mFaces[i];
             if (face.mNumIndices != 3)
             {
+
                 // Skip non-triangular faces
                 continue;
             }
+
+            // Add the indices to the mesh
             mesh.indices.push_back(face.mIndices[0]);
             mesh.indices.push_back(face.mIndices[1]);
             mesh.indices.push_back(face.mIndices[2]);

@@ -223,13 +223,17 @@ void simple_light()
   world.add(make_shared<sphere>(point3(0, 7, 0), 2, difflight));
   world.add(make_shared<quad>(point3(3, 1, -2), vec3(2, 0, 0), vec3(0, 2, 0), difflight));
 
+  auto empty_material = shared_ptr<material>();
+  hittable_list lights;
+  lights.add(make_shared<sphere>(point3(0, 1, 0), 90, empty_material));
+
   camera cam;
 
   cam.aspect_ratio = 16.0 / 9.0;
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 50;
-  // cam.background = color(0, 0, 0);
+  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 20;
   cam.lookfrom = point3(26, 3, 6);
@@ -238,60 +242,58 @@ void simple_light()
 
   cam.defocus_angle = 0;
 
-  // cam.render(world);
+  cam.render(world, lights);
 }
 void cornell_box()
 {
-hittable_list world;
+  hittable_list world;
 
-auto red = make_shared<lambertian>(color(.65, .05, .05));
-auto white = make_shared<lambertian>(color(.73, .73, .73));
-auto green = make_shared<lambertian>(color(.12, .45, .15));
-auto light = make_shared<diffuse_light>(color(15, 15, 15));
+  auto red = make_shared<lambertian>(color(.65, .05, .05));
+  auto white = make_shared<lambertian>(color(.73, .73, .73));
+  auto green = make_shared<lambertian>(color(.12, .45, .15));
+  auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
-// Cornell box sides
-world.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 0, 555), vec3(0, 555, 0), green));
-world.add(make_shared<quad>(point3(0, 0, 555), vec3(0, 0, -555), vec3(0, 555, 0), red));
-world.add(make_shared<quad>(point3(0, 555, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
-world.add(make_shared<quad>(point3(0, 0, 555), vec3(555, 0, 0), vec3(0, 0, -555), white));
-world.add(make_shared<quad>(point3(555, 0, 555), vec3(-555, 0, 0), vec3(0, 555, 0), white));
+  // Cornell box sides
+  world.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 0, 555), vec3(0, 555, 0), green));
+  world.add(make_shared<quad>(point3(0, 0, 555), vec3(0, 0, -555), vec3(0, 555, 0), red));
+  world.add(make_shared<quad>(point3(0, 555, 0), vec3(555, 0, 0), vec3(0, 0, 555), white));
+  world.add(make_shared<quad>(point3(0, 0, 555), vec3(555, 0, 0), vec3(0, 0, -555), white));
+  world.add(make_shared<quad>(point3(555, 0, 555), vec3(-555, 0, 0), vec3(0, 555, 0), white));
 
-// Light
-world.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
+  // Light
+  world.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
 
-// Box
-shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), white);
-box1 = make_shared<rotate_y>(box1, 15);
-box1 = make_shared<translate>(box1, vec3(265, 0, 295));
-world.add(box1);
+  // Box
+  shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), white);
+  box1 = make_shared<rotate_y>(box1, 15);
+  box1 = make_shared<translate>(box1, vec3(265, 0, 295));
+  world.add(box1);
 
-// Glass Sphere
-auto glass = make_shared<dielectric>(1.5);
-world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
+  // Glass Sphere
+  auto glass = make_shared<dielectric>(1.5);
+  world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
 
-// Light Sources
-auto empty_material = shared_ptr<material>();
-hittable_list lights;
-lights.add(
-    make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
-lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
+  // Light Sources
+  auto empty_material = shared_ptr<material>();
+  hittable_list lights;
+  lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
 
-camera cam;
+  camera cam;
 
-cam.aspect_ratio = 1.0;
-cam.image_width = 600;
-cam.samples_per_pixel = 100;
-cam.max_depth = 50;
-cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
+  cam.aspect_ratio = 1.0;
+  cam.image_width = 600;
+  cam.samples_per_pixel = 10;
+  cam.max_depth = 50;
+  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
-cam.vfov = 40;
-cam.lookfrom = point3(278, 278, -800);
-cam.lookat = point3(278, 278, 0);
-cam.vup = vec3(0, 1, 0);
+  cam.vfov = 40;
+  cam.lookfrom = point3(278, 278, -800);
+  cam.lookat = point3(278, 278, 0);
+  cam.vup = vec3(0, 1, 0);
 
-cam.defocus_angle = 0;
+  cam.defocus_angle = 0;
 
-cam.render(world, lights);
+  cam.render(world, lights);
 }
 
 void cornell_smoke()
@@ -476,9 +478,10 @@ void cube_map_test()
 void triangle_mesh_test_scene()
 {
   hittable_list world;
-  std::vector<shared_ptr<hittable>> triangles;
+  hittable_list mesh_list; // List to store all triangles
 
   auto red = make_shared<lambertian>(color(1.0, 0.0, 0.0));
+  auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
   // Import a triangle mesh using MeshImporter (e.g., some .obj file)
   std::vector<Mesh> meshes;
@@ -487,20 +490,27 @@ void triangle_mesh_test_scene()
     MeshImporter importer;
     for (const auto &mesh : meshes)
     {
+      std::vector<shared_ptr<hittable>> triangles;
       importer.convertMeshToTriangles(mesh, triangles, red);
+
+      // Add triangles to the mesh_list
+      for (const auto &tri : triangles)
+      {
+        if (tri)
+        {
+          mesh_list.add(tri);
+        }
+        else
+        {
+          std::cerr << "null triangle skipped!" << std::endl;
+        }
+      }
     }
 
-    // Add all triangles to the world
-    for (auto &tri : triangles)
+    // Create a BVH for all the triangles in the mesh_list
+    if (!mesh_list.objects.empty())
     {
-      if (tri)
-      {
-        world.add(make_shared<bvh_node>(tri));
-      }
-      else
-      {
-        std::cerr << "null triangle skipped!" << std::endl;
-      }
+      world.add(make_shared<bvh_node>(mesh_list));
     }
   }
   else
@@ -508,17 +518,18 @@ void triangle_mesh_test_scene()
     std::cerr << "Failed to load the mesh!" << std::endl;
     return;
   }
+  world.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
 
   auto empty_material = shared_ptr<material>();
   hittable_list lights;
-  lights.add(make_shared<sphere>(point3(0, 5, 5), 1, empty_material));
+  lights.add(make_shared<sphere>(point3(0, 5, 5), 90, empty_material));
 
   camera cam;
   cam.aspect_ratio = 1.0;
   cam.image_width = 500;
   cam.samples_per_pixel = 10;
   cam.max_depth = 50;
-  cam.set_background(make_shared<solid_color>(color(1.0, 1.0, 1.0)), false);
+  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 90;
   cam.lookfrom = point3(3, 2, 3); // Camera inside the room looking toward the door
@@ -528,50 +539,55 @@ void triangle_mesh_test_scene()
 
   // Render the scene
   cam.render(world, lights);
-}
+  }
+
+
 int main(int arg, char *argv[])
 {
-  std::string command = "12";
-  if (arg >= 2)
-    command = argv[1];
+    std::string command = "12";
+    if (arg >= 2)
+    {
+      command = argv[1];
+    }
 
-  switch (std::stoi(command))
-  {
-  case 1:
-    bouncing_spheres();
-    break;
-  case 2:
-    checkered_spheres();
-    break;
-  case 3:
-    earth();
-    break;
-  case 4:
-    perlin_spheres();
-    break;
-  case 5:
-    quads();
-    break;
-  case 6:
-    simple_light();
-    break;
-  case 7:
-    cornell_box();
-    break;
-  case 8:
-    cornell_smoke();
-    break;
-  case 9:
-    final_scene(800, 10000, 40);
-    break;
-  case 10:
-    final_scene(400, 250, 4);
-    break;
-  case 11:
-    cube_map_test();
-    break;
-  case 12:
-    triangle_mesh_test_scene();
-    break;
-  }
+    switch (std::stoi(command))
+    {
+    case 1:
+      bouncing_spheres();
+      break;
+    case 2:
+      checkered_spheres();
+      break;
+    case 3:
+      earth();
+      break;
+    case 4:
+      perlin_spheres();
+      break;
+    case 5:
+      quads();
+      break;
+    case 6:
+      simple_light();
+      break;
+    case 7:
+      cornell_box();
+      break;
+    case 8:
+      cornell_smoke();
+      break;
+    case 9:
+      final_scene(800, 10000, 40);
+      break;
+    case 10:
+      final_scene(400, 250, 4);
+      break;
+    case 11:
+      cube_map_test();
+      break;
+    case 12:
+      triangle_mesh_test_scene();
+      break;
+    }
+    return 0;
 }

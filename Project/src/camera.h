@@ -108,9 +108,9 @@ public:
     // Lambda function to render a chunk of rows
     auto render_chunk = [&](int start_row, int end_row)
     {
-      for (int j = start_row; j < end_row; ++j)
+      for (int j = start_row; j < end_row; j++)
       {
-        for (int i = 0; i < image_width; ++i)
+        for (int i = 0; i < image_width; i++)
         {
           color pixel_color(0, 0, 0);
           for (int s_j = 0; s_j < sqrt_spp; s_j++)
@@ -248,6 +248,12 @@ private:
   {
     // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
     return vec3(random_double() - 0.5, random_double() - 0.5, 0);
+  }
+
+  vec3 sample_disk(double radius) const
+  {
+    // Returns a random point in the unit (radius 0.5) disk centered at the origin.
+    return radius * random_in_unit_disk();
   }
 
   point3 defocus_disk_sample() const
