@@ -121,7 +121,7 @@ private:
     }
 
 public:
-    void convertMeshToTriangles(const Mesh &mesh, std::vector<shared_ptr<hittable>> &triangles, shared_ptr<material> mat)
+    void convertMeshToTriangles(const Mesh &mesh, std::vector<shared_ptr<hittable>> &triangles, shared_ptr<material> mat, float scale)
     {
         for (size_t i = 0; i < mesh.indices.size(); i += 3)
         {
@@ -139,11 +139,13 @@ public:
             Vertex v1 = mesh.vertices[idx1];
             Vertex v2 = mesh.vertices[idx2];
 
-            triangles.push_back(make_shared<tri>(
-                point3(v0.position[0], v0.position[1], v0.position[2]),
-                point3(v1.position[0], v1.position[1], v1.position[2]),
-                point3(v2.position[0], v2.position[1], v2.position[2]),
-                mat));
+            // Apply scaling to the vertex positions
+            point3 scaled_v0(v0.position[0] * scale, v0.position[1] * scale, v0.position[2] * scale);
+            point3 scaled_v1(v1.position[0] * scale, v1.position[1] * scale, v1.position[2] * scale);
+            point3 scaled_v2(v2.position[0] * scale, v2.position[1] * scale, v2.position[2] * scale);
+
+            // Add the scaled triangle to the list
+            triangles.push_back(make_shared<tri>(scaled_v0, scaled_v1, scaled_v2, mat));
         }
     }
 };

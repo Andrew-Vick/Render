@@ -77,6 +77,12 @@ void bouncing_spheres()
   auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
   world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
 
+  auto empty_material = shared_ptr<material>();
+  hittable_list lights;
+  lights.add(
+      make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
+  lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
+
   world = hittable_list(make_shared<bvh_node>(world));
 
   camera cam;
@@ -95,7 +101,7 @@ void bouncing_spheres()
   cam.defocus_angle = 0.6;
   cam.focus_dist = 10.0;
 
-  // cam.render(world);
+  cam.render(world,lights);
 }
 
 void checkered_spheres()
@@ -244,6 +250,7 @@ void simple_light()
 
   cam.render(world, lights);
 }
+
 void cornell_box()
 {
   hittable_list world;
@@ -276,14 +283,16 @@ void cornell_box()
   // Light Sources
   auto empty_material = shared_ptr<material>();
   hittable_list lights;
+  lights.add(
+      make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
   lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
 
   camera cam;
 
   cam.aspect_ratio = 1.0;
   cam.image_width = 600;
-  cam.samples_per_pixel = 10;
-  cam.max_depth = 50;
+  cam.samples_per_pixel = 75;
+  cam.max_depth = 25;
   cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 40;
@@ -426,6 +435,7 @@ void final_scene(int image_width, int samples_per_pixel, int max_depth)
 void cube_map_test()
 {
   hittable_list world;
+  hittable_list mesh_list;
 
   // Define cubemap faces
   std::array<std::string, 6> cubemap_faces = {
@@ -441,25 +451,64 @@ void cube_map_test()
   auto cubemap_texture = std::make_shared<cube_map_texture>(cubemap_faces);
 
   // Add objects to the scene
-  auto metal_material = make_shared<metal>(color(0.8, 0.8, 0.9), 0.0);
-  world.add(make_shared<sphere>(point3(-4.5, 0, 0), 5.0, metal_material));
+  auto red = make_shared<lambertian>(color(1, 1, 1));
+  auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
-  auto glass_material = make_shared<dielectric>(1.5);
-  world.add(make_shared<sphere>(point3(4.5, 0, 0), 5.0, glass_material));
+  // Import a triangle mesh using MeshImporter (e.g., some .obj file)
+  std::vector<Mesh> meshes;
+  if (MeshImporter::LoadMesh("/Users/andrewvick/Coms336/Project/src/Textures/meshes/vaze3.OBJ", meshes))
+  {
+    MeshImporter importer;
+    for (const auto &mesh : meshes)
+    {
+      std::vector<shared_ptr<hittable>> triangles;
+      importer.convertMeshToTriangles(mesh, triangles, red, 0.05);
+
+      // Add triangles to the mesh_list
+      for (const auto &tri : triangles)
+      {
+        if (tri)
+        {
+          mesh_list.add(tri);
+        }
+        else
+        {
+          std::cerr << "null triangle skipped!" << std::endl;
+        }
+      }
+    }
+
+    // Create a BVH for all the triangles in the mesh_list
+    if (!mesh_list.objects.empty())
+    {
+      auto moved_mesh = make_shared<translate>(make_shared<bvh_node>(mesh_list), vec3(10, 0, 0));
+      world.add(moved_mesh);
+    }
+  }
+  else
+  {
+    std::cerr << "Failed to load the mesh!" << std::endl;
+    return;
+  }
+
+  //Light
+  world.add(make_shared<quad>(point3(0, 90, -10), vec3(10, 0, 0), vec3(0, 0, -10), light));
 
   auto empty_material = shared_ptr<material>();
   hittable_list lights;
-  // lights.add(
-  //     make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
-  // lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
+  lights.add(
+      make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
+  lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
+
+  world = hittable_list(make_shared<bvh_node>(world));
 
   // Set up the camera
   camera cam;
 
-  cam.aspect_ratio = 16.0 / 9.0;
-  cam.image_width = 2560;
-  cam.samples_per_pixel = 10;
-  cam.max_depth = 10;
+  cam.aspect_ratio = 1.0;
+  cam.image_width = 1080;
+  cam.samples_per_pixel = 250;
+  cam.max_depth = 100;
 
   // Set the background to the cubemap texture
   cam.set_background(cubemap_texture, true);
@@ -491,7 +540,7 @@ void triangle_mesh_test_scene()
     for (const auto &mesh : meshes)
     {
       std::vector<shared_ptr<hittable>> triangles;
-      importer.convertMeshToTriangles(mesh, triangles, red);
+      importer.convertMeshToTriangles(mesh, triangles, red,1.0);
 
       // Add triangles to the mesh_list
       for (const auto &tri : triangles)
@@ -524,11 +573,13 @@ void triangle_mesh_test_scene()
   hittable_list lights;
   lights.add(make_shared<sphere>(point3(0, 5, 5), 90, empty_material));
 
+  world = hittable_list(make_shared<bvh_node>(world));
+
   camera cam;
   cam.aspect_ratio = 1.0;
   cam.image_width = 500;
-  cam.samples_per_pixel = 10;
-  cam.max_depth = 50;
+  cam.samples_per_pixel = 1000;
+  cam.max_depth = 1000;
   cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
 
   cam.vfov = 90;
