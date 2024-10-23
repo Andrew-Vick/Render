@@ -1,14 +1,3 @@
-//==============================================================================================
-// Originally written in 2016 by Peter Shirley <ptrshrl@gmail.com>
-//
-// To the extent possible under law, the author(s) have dedicated all copyright and related and
-// neighboring rights to this software to the public domain worldwide. This software is
-// distributed without any warranty.
-//
-// You should have received a copy (see file COPYING.txt) of the CC0 Public Domain Dedication
-// along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
-//==============================================================================================
-
 #include "rtweekend.h"
 #include <array>
 #include <optional>
@@ -101,7 +90,7 @@ void bouncing_spheres()
   cam.defocus_angle = 0.6;
   cam.focus_dist = 10.0;
 
-  cam.render(world,lights);
+  cam.render(world, lights);
 }
 
 void checkered_spheres()
@@ -491,7 +480,7 @@ void cube_map_test()
     return;
   }
 
-  //Light
+  // Light
   world.add(make_shared<quad>(point3(0, 90, -10), vec3(10, 0, 0), vec3(0, 0, -10), light));
 
   auto empty_material = shared_ptr<material>();
@@ -524,121 +513,50 @@ void cube_map_test()
   cam.render(world, lights);
 }
 
-void triangle_mesh_test_scene()
-{
-  hittable_list world;
-  hittable_list mesh_list; // List to store all triangles
-
-  auto red = make_shared<lambertian>(color(1.0, 0.0, 0.0));
-  auto light = make_shared<diffuse_light>(color(15, 15, 15));
-
-  // Import a triangle mesh using MeshImporter (e.g., some .obj file)
-  std::vector<Mesh> meshes;
-  if (MeshImporter::LoadMesh("/Users/andrewvick/Coms336/Project/src/Textures/meshes/vaze3.OBJ", meshes))
-  {
-    MeshImporter importer;
-    for (const auto &mesh : meshes)
-    {
-      std::vector<shared_ptr<hittable>> triangles;
-      importer.convertMeshToTriangles(mesh, triangles, red,1.0);
-
-      // Add triangles to the mesh_list
-      for (const auto &tri : triangles)
-      {
-        if (tri)
-        {
-          mesh_list.add(tri);
-        }
-        else
-        {
-          std::cerr << "null triangle skipped!" << std::endl;
-        }
-      }
-    }
-
-    // Create a BVH for all the triangles in the mesh_list
-    if (!mesh_list.objects.empty())
-    {
-      world.add(make_shared<bvh_node>(mesh_list));
-    }
-  }
-  else
-  {
-    std::cerr << "Failed to load the mesh!" << std::endl;
-    return;
-  }
-  world.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
-
-  auto empty_material = shared_ptr<material>();
-  hittable_list lights;
-  lights.add(make_shared<sphere>(point3(0, 5, 5), 90, empty_material));
-
-  world = hittable_list(make_shared<bvh_node>(world));
-
-  camera cam;
-  cam.aspect_ratio = 1.0;
-  cam.image_width = 500;
-  cam.samples_per_pixel = 1000;
-  cam.max_depth = 1000;
-  cam.set_background(make_shared<solid_color>(color(0.0, 0.0, 0.0)), false);
-
-  cam.vfov = 90;
-  cam.lookfrom = point3(3, 2, 3); // Camera inside the room looking toward the door
-  cam.lookat = point3(0, 0, 0);   // Looking at the door
-  cam.vup = vec3(0, 1, 0);
-  cam.defocus_angle = 0;
-
-  // Render the scene
-  cam.render(world, lights);
-  }
-
-
 int main(int arg, char *argv[])
 {
-    std::string command = "12";
-    if (arg >= 2)
-    {
-      command = argv[1];
-    }
+  std::string command = "12";
+  if (arg >= 2)
+  {
+    command = argv[1];
+  }
 
-    switch (std::stoi(command))
-    {
-    case 1:
-      bouncing_spheres();
-      break;
-    case 2:
-      checkered_spheres();
-      break;
-    case 3:
-      earth();
-      break;
-    case 4:
-      perlin_spheres();
-      break;
-    case 5:
-      quads();
-      break;
-    case 6:
-      simple_light();
-      break;
-    case 7:
-      cornell_box();
-      break;
-    case 8:
-      cornell_smoke();
-      break;
-    case 9:
-      final_scene(800, 10000, 40);
-      break;
-    case 10:
-      final_scene(400, 250, 4);
-      break;
-    case 11:
-      cube_map_test();
-      break;
-    case 12:
-      triangle_mesh_test_scene();
-      break;
-    }
-    return 0;
+  switch (std::stoi(command))
+  {
+  case 1:
+    bouncing_spheres();
+    break;
+  case 2:
+    checkered_spheres();
+    break;
+  case 3:
+    earth();
+    break;
+  case 4:
+    perlin_spheres();
+    break;
+  case 5:
+    quads();
+    break;
+  case 6:
+    simple_light();
+    break;
+  case 7:
+    cornell_box();
+    break;
+  case 8:
+    cornell_smoke();
+    break;
+  case 9:
+    final_scene(800, 10000, 40);
+    break;
+  case 10:
+    final_scene(400, 250, 4);
+    break;
+  case 11:
+    cube_map_test();
+    break;
+  }
+
+  return 0;
 }
