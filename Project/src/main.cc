@@ -13,6 +13,24 @@
 #include "texture.h"
 #include "mesh_import.h"
 
+/**
+ * @brief Render Notation
+ * 
+ * vec3: 3D vector
+ * point3: 3D point
+ * color: RGB color
+ * (x, y, z); (r, g, b): 3D coordinates and RGB color
+ * x < 0 object is to the left, x > 0 object is to the right
+ * y < 0 object is at the bottom, y > 0 object is at the top
+ * z < 0 object is in front, z > 0 object is behind
+ * 
+ * quad: 
+ * Q(point3(x, y, z){Bottom-Left Corner}, 
+ * u(vec3(x, y, z){line at bottom edge from bottom left(Q) -> bottom right }), 
+ * v(vec3(x, y, z){Line from left edge -> Top-left corner}), 
+ * mat(material)
+ */
+
 void bouncing_spheres()
 {
   hittable_list world;
@@ -247,6 +265,7 @@ void cornell_box()
   auto red = make_shared<lambertian>(color(.65, .05, .05));
   auto white = make_shared<lambertian>(color(.73, .73, .73));
   auto green = make_shared<lambertian>(color(.12, .45, .15));
+  auto blue = make_shared<lambertian>(color(.15, .15, .65));
   auto light = make_shared<diffuse_light>(color(15, 15, 15));
 
   // Cornell box sides
@@ -265,9 +284,46 @@ void cornell_box()
   box1 = make_shared<translate>(box1, vec3(265, 0, 295));
   world.add(box1);
 
+  std::vector<Mesh> meshes;
+  hittable_list mesh_list;
+  if (MeshImporter::LoadMesh("/Users/andrewvick/Coms336/Project/src/Textures/meshes/vaze3.OBJ", meshes))
+  {
+    MeshImporter importer;
+    for (const auto &mesh : meshes)
+    {
+      std::vector<shared_ptr<hittable>> triangles;
+      importer.convertMeshToTriangles(mesh, triangles, blue, 1);
+
+      // Add triangles to the mesh_list
+      for (const auto &tri : triangles)
+      {
+        if (tri)
+        {
+          mesh_list.add(tri);
+        }
+        else
+        {
+          std::cerr << "null triangle skipped!" << std::endl;
+        }
+      }
+    }
+
+    // Create a BVH for all the triangles in the mesh_list
+    if (!mesh_list.objects.empty())
+    {
+      auto moved_mesh = make_shared<translate>(make_shared<bvh_node>(mesh_list), vec3(190, 90, 190));
+      world.add(moved_mesh);
+    }
+  }
+  else
+  {
+    std::cerr << "Failed to load the mesh!" << std::endl;
+    return;
+  }
+
   // Glass Sphere
-  auto glass = make_shared<dielectric>(1.5);
-  world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
+  // auto glass = make_shared<dielectric>(1.5);
+  // world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
 
   // Light Sources
   auto empty_material = shared_ptr<material>();
@@ -451,7 +507,7 @@ void cube_map_test()
     for (const auto &mesh : meshes)
     {
       std::vector<shared_ptr<hittable>> triangles;
-      importer.convertMeshToTriangles(mesh, triangles, red, 0.05);
+      importer.convertMeshToTriangles(mesh, triangles, red, 0.5);
 
       // Add triangles to the mesh_list
       for (const auto &tri : triangles)
@@ -470,7 +526,7 @@ void cube_map_test()
     // Create a BVH for all the triangles in the mesh_list
     if (!mesh_list.objects.empty())
     {
-      auto moved_mesh = make_shared<translate>(make_shared<bvh_node>(mesh_list), vec3(10, 0, 0));
+      auto moved_mesh = make_shared<translate>(make_shared<bvh_node>(mesh_list), vec3(0, 0, 10));
       world.add(moved_mesh);
     }
   }
@@ -481,12 +537,12 @@ void cube_map_test()
   }
 
   // Light
-  world.add(make_shared<quad>(point3(0, 90, -10), vec3(10, 0, 0), vec3(0, 0, -10), light));
+  //world.add(make_shared<quad>(point3(0, 90, -10), vec3(10, 0, 0), vec3(0, 0, -10), light));
 
   auto empty_material = shared_ptr<material>();
   hittable_list lights;
-  lights.add(
-      make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
+  // lights.add(
+  //     make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), empty_material));
   lights.add(make_shared<sphere>(point3(190, 90, 190), 90, empty_material));
 
   world = hittable_list(make_shared<bvh_node>(world));
@@ -496,14 +552,14 @@ void cube_map_test()
 
   cam.aspect_ratio = 1.0;
   cam.image_width = 1080;
-  cam.samples_per_pixel = 250;
-  cam.max_depth = 100;
+  cam.samples_per_pixel = 1000;
+  cam.max_depth = 50;
 
   // Set the background to the cubemap texture
   cam.set_background(cubemap_texture, true);
 
   cam.vfov = 90;
-  cam.lookfrom = point3(0, 0, 10);
+  cam.lookfrom = point3(0, 0, -1);
   cam.lookat = point3(0, 0, 0);
   cam.vup = vec3(0, 1, 0);
 
