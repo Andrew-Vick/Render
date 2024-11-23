@@ -27,6 +27,7 @@ set ( SOURCE_ONE_WEEKEND
   src/perlin.h
   src/quad.h
   src/ray.h
+  src/thread_pool.h
   src/rtw_stb_image.h
   src/rtweekend.h
   src/sphere.h
@@ -42,6 +43,12 @@ set(ASSIMP_LIBRARIES "/usr/local/lib/libassimp.dylib")
 
 include_directories(${ASSIMP_INCLUDE_DIRS})
 
+# Set the build type to Debug if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Add debug symbols
 
 
 # Specific compiler flags below. We're not going to add options for all possible compilers, but if
@@ -72,5 +79,5 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 # Executables
-add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
+add_executable(inOneWeekend ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
 target_link_libraries(inOneWeekend ${ASSIMP_LIBRARIES})

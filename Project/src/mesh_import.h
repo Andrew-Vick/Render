@@ -7,18 +7,29 @@
 #include <vector>
 #include <string>
 #include <iostream>
-
+#include "color.h"
+#include "aabb.h"
 struct Vertex
 {
     float position[3];
     float normal[3];
     float texCoords[2];
+    int materialIndex;
+};
+
+struct Material
+{
+    std::string name;
+    std::shared_ptr<texture> diffuseTexture;
+    color diffuseColor;
 };
 
 struct Mesh
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
+    std::vector<shared_ptr<material>> materials; // Add materials to the mesh
+    aabb bounding_box;
 };
 
 class MeshImporter
@@ -68,25 +79,17 @@ private:
             vertex.position[1] = ai_mesh->mVertices[i].y;
             vertex.position[2] = ai_mesh->mVertices[i].z;
 
-            // Check if the mesh contains normals if not set them to zero
             if (ai_mesh->HasNormals())
             {
                 vertex.normal[0] = ai_mesh->mNormals[i].x;
                 vertex.normal[1] = ai_mesh->mNormals[i].y;
                 vertex.normal[2] = ai_mesh->mNormals[i].z;
             }
-            else
-            {
-                vertex.normal[0] = 0.0f;
-                vertex.normal[1] = 0.0f;
-                vertex.normal[2] = 0.0f;
-            }
 
-            // Check if the mesh contains texture coordinates if not set them to zero
             if (ai_mesh->HasTextureCoords(0))
             {
                 vertex.texCoords[0] = ai_mesh->mTextureCoords[0][i].x;
-                vertex.texCoords[1] = ai_mesh->mTextureCoords[0][i].y;
+                vertex.texCoords[1] = 1.0f - ai_mesh->mTextureCoords[0][i].y;
             }
             else
             {
@@ -94,34 +97,75 @@ private:
                 vertex.texCoords[1] = 0.0f;
             }
 
-            // Add the vertex to the mesh
+            vertex.materialIndex = ai_mesh->mMaterialIndex;
             mesh.vertices.push_back(vertex);
         }
 
-        // Process indices
+        // Process indices (no change)
         for (unsigned int i = 0; i < ai_mesh->mNumFaces; i++)
         {
-            
-            // Get the face
             aiFace face = ai_mesh->mFaces[i];
-            if (face.mNumIndices != 3)
+            for (unsigned int j = 0; j < face.mNumIndices; j++)
             {
-
-                // Skip non-triangular faces
-                continue;
+                unsigned int index = face.mIndices[j];
+                if (index < ai_mesh->mNumVertices)
+                {
+                    mesh.indices.push_back(index);
+                }
             }
+        }
 
-            // Add the indices to the mesh
-            mesh.indices.push_back(face.mIndices[0]);
-            mesh.indices.push_back(face.mIndices[1]);
-            mesh.indices.push_back(face.mIndices[2]);
+        mesh.bounding_box = aabb(point3(ai_mesh->mAABB.mMin.x, ai_mesh->mAABB.mMin.y, ai_mesh->mAABB.mMin.z),
+                                 point3(ai_mesh->mAABB.mMax.x, ai_mesh->mAABB.mMax.y, ai_mesh->mAABB.mMax.z));
+
+        // Process materials
+        if (scene->HasMaterials())
+        {
+            std::clog << "has materials" << std::endl;
+            for (unsigned int i = 0; i < scene->mNumMaterials; i++)
+            {
+                aiMaterial *ai_material = scene->mMaterials[i];
+                shared_ptr<material> mat;
+
+                // Load diffuse texture if available
+                if (ai_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+                {
+                    std::clog << "has diffuse" << std::endl;
+                    aiString path;
+                    if (ai_material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS)
+                    {
+                        std::clog << "Loading texture: " << path.C_Str() << std::endl;
+                        // Use the actual texture path from the material
+                        auto texture = make_shared<image_texture>(path.C_Str());
+                        mat = make_shared<lambertian>(texture);
+                    }
+                }
+                else
+                {
+                    std::clog << "no diffuse" << std::endl;
+                    aiColor3D aiColor(0.f, 0.f, 0.f);
+                    if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor))
+                    {
+                        std::clog << "Loading color: " << aiColor.r << " " << aiColor.g << " " << aiColor.b << std::endl;
+                        mat = make_shared<lambertian>(color(1.0, 0.0, 0.0));
+                    }
+                }
+
+                if (!mat)
+                {
+                    std::clog << "Default material" << std::endl;
+                    mat = make_shared<lambertian>(color(1.0, 0.0, 0.0)); // Default material
+                }
+
+                mesh.materials.push_back(mat);
+            }
         }
 
         return mesh;
     }
 
 public:
-    void convertMeshToTriangles(const Mesh &mesh, std::vector<shared_ptr<hittable>> &triangles, shared_ptr<material> mat, float scale)
+    void convertMeshToTriangles(const Mesh &mesh, std::vector<shared_ptr<hittable>> &triangles)
     {
         for (size_t i = 0; i < mesh.indices.size(); i += 3)
         {
@@ -129,23 +173,32 @@ public:
             unsigned int idx1 = mesh.indices[i + 1];
             unsigned int idx2 = mesh.indices[i + 2];
 
+            // Ensure indices are within bounds
             if (idx0 >= mesh.vertices.size() || idx1 >= mesh.vertices.size() || idx2 >= mesh.vertices.size())
-            {
-                std::cerr << "ERROR: Vertex index out of bounds." << std::endl;
                 continue;
-            }
 
-            Vertex v0 = mesh.vertices[idx0];
-            Vertex v1 = mesh.vertices[idx1];
-            Vertex v2 = mesh.vertices[idx2];
+            const Vertex &v0 = mesh.vertices[idx0];
+            const Vertex &v1 = mesh.vertices[idx1];
+            const Vertex &v2 = mesh.vertices[idx2];
 
-            // Apply scaling to the vertex positions
-            point3 scaled_v0(v0.position[0] * scale, v0.position[1] * scale, v0.position[2] * scale);
-            point3 scaled_v1(v1.position[0] * scale, v1.position[1] * scale, v1.position[2] * scale);
-            point3 scaled_v2(v2.position[0] * scale, v2.position[1] * scale, v2.position[2] * scale);
+            // Apply scaling and translation to vertex positions
+            point3 p0 = point3(v0.position[0], v0.position[1], v0.position[2]);
+            point3 p1 = point3(v1.position[0], v1.position[1], v1.position[2]);
+            point3 p2 = point3(v2.position[0], v2.position[1], v2.position[2]);
 
-            // Add the scaled triangle to the list
-            triangles.push_back(make_shared<tri>(scaled_v0, scaled_v1, scaled_v2, mat));
+            // Compute edge vectors for the triangle
+            vec3 aa = p1 - p0;
+            vec3 ab = p2 - p0;
+
+            // Retrieve the material for the triangle
+            shared_ptr<material> mat = mesh.materials[v0.materialIndex];
+
+            // Construct the triangle using the existing constructor
+            vec3 uv0 = {v0.texCoords[0], v0.texCoords[1], 0};
+            vec3 uv1 = {v1.texCoords[0], v1.texCoords[1], 0};
+            vec3 uv2 = {v2.texCoords[0], v2.texCoords[1], 0};
+
+            triangles.push_back(make_shared<tri>(p0, aa, ab, mat, uv0, uv1, uv2));
         }
     }
 };

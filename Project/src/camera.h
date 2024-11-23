@@ -9,6 +9,7 @@
 #include "hittable.h"
 #include "pdf.h"
 #include "material.h"
+#include "thread_pool.h"
 
 /**
  * @brief A camera class for rendering images.
@@ -17,6 +18,14 @@
  * then we would have to add a method to HITTABLE that would allow for all animated objects to setup
  * thier motion during the frame.
  */
+
+struct RenderTask
+{
+  int start_row;
+  int end_row;
+  int start_col;
+  int end_col;
+};
 
 class camera
 {
@@ -42,7 +51,6 @@ public:
     is_hdr = hdr;
     background = bg_tex;
   }
-
   
   /**
    * ORIGINAL RENDER METHOD -- SINGLE THREAD
@@ -72,82 +80,40 @@ public:
   //   std::clog << "\rDone.                 \n";
   // }
 
-  /**
-   * NEW RENDER METHOD -- MULTI THREAD
-   *
-   * This method will render the image in parallel using multiple threads.
-   * The image is divided into chunks of rows, and each thread renders a chunk.
-   *
-   * IMPROVEMENTS:
-   * - add a dynamic task queue to allow for more efficient thread management and load balancing
-   *
-   * pseudocode for dynamic task queue:
-   * 1. Create task struct (e.g. tile coordinates 16x16 pixels) -- expiriment with different sizes, too small and overhead is too high, too large and load balancing is poor
-   * 2. init task queue
-   * 3. replace chunk processing with a loop that
-   *   - Locks the queue
-   *   - checks if queue is empty
-   *   - if not, pops a task from the queue
-   *   - unlocks the queue
-   *   - processes the task
-   * 4. Need thread pool management, where threads are created once and then reused
-   */
-  std::mutex output_mutex;
-  std::atomic<int> lines_rendered{0};
-
-  void render(const hittable &world, const hittable& lights)
+  void render(const hittable &world, const hittable &lights, ThreadPool &pool)
   {
     initialize();
-
-    int num_threads = std::thread::hardware_concurrency();
-    int rows_per_thread = image_height / num_threads;
 
     // Create the raster buffer to hold the image data
     std::vector<color> image_data(image_width * image_height);
 
     // Lambda function to render a chunk of rows
-    auto render_chunk = [&](int start_row, int end_row)
+    auto render_chunk = [&](int j)
     {
-      for (int j = start_row; j < end_row; j++)
+      for (int i = 0; i < image_width; i++)
       {
-        for (int i = 0; i < image_width; i++)
+        color pixel_color(0, 0, 0);
+        for (int s_j = 0; s_j < sqrt_spp; s_j++)
         {
-          color pixel_color(0, 0, 0);
-          for (int s_j = 0; s_j < sqrt_spp; s_j++)
+          for (int s_i = 0; s_i < sqrt_spp; s_i++)
           {
-            for (int s_i = 0; s_i < sqrt_spp; s_i++)
-            {
-              ray r = get_ray(i, j, s_i, s_j);
-              pixel_color += ray_color(r, max_depth, world, lights);
-            }
+            ray r = get_ray(i, j, s_i, s_j);
+            pixel_color += ray_color(r, max_depth, world, lights);
           }
-          image_data[j * image_width + i] = pixel_samples_scale * pixel_color;
         }
-
-        // Progress output for completed lines
-        lines_rendered++;
-        {
-          std::lock_guard<std::mutex> lock(output_mutex);
-          int percentage = static_cast<int>(100.0 * lines_rendered / image_height);
-          std::clog << "\rRendering: " << percentage << "% complete" << std::flush;
-        }
+        image_data[j * image_width + i] = pixel_samples_scale * pixel_color;
       }
     };
 
-    // Launch threads to render the chunks of the image
-    std::vector<std::future<void>> futures;
-    for (int t = 0; t < num_threads; ++t)
+    // Enqueue each row rendering task in the thread pool
+    for (int j = 0; j < image_height; j++)
     {
-      int start_row = t * rows_per_thread;
-      int end_row = (t == num_threads - 1) ? image_height : start_row + rows_per_thread;
-      futures.push_back(std::async(std::launch::async, render_chunk, start_row, end_row));
+      pool.enqueue([=, &world, &lights, &image_data]
+                   { render_chunk(j); });
     }
 
-    // Wait for all threads to finish rendering
-    for (auto &future : futures)
-    {
-      future.get();
-    }
+    // Wait until all rows are rendered
+    pool.wait_till_done();
 
     // After rendering, output the rasterized image to a file (or console)
     std::cout << "P3\n"

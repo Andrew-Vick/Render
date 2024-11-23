@@ -4,83 +4,137 @@
 #include "aabb.h"
 #include "hittable.h"
 #include "hittable_list.h"
+#include "aabb.h" // Ensure this header is included for surrounding_box function
 
 
 #include <algorithm>
-
 
 class bvh_node : public hittable
 {
 public:
     bvh_node(hittable_list list) : bvh_node(list.objects, 0, list.objects.size())
     {
-        // There's a C++ subtlety here. This constructor (without span indices) creates an
-        // implicit copy of the hittable list, which we will modify. The lifetime of the copied
-        // list only extends until this constructor exits. That's OK, because we only need to
-        // persist the resulting bounding volume hierarchy.
+
     }
 
     bvh_node(std::vector<shared_ptr<hittable>> &objects, size_t start, size_t end)
     {
-        bbox = aabb::empty;
-        for (size_t object_index = start; object_index < end; object_index++)
-            bbox = aabb(bbox, objects[object_index]->bounding_box());
 
-        int axis = bbox.longest_axis();
 
-        auto comparator = (axis == 0)   ? box_x_compare
-                          : (axis == 1) ? box_y_compare
-                                        : box_z_compare;
+        // Check for valid indices
+        if (start >= end || objects.empty())
+        {
+            return;
+        }
 
         size_t object_span = end - start;
 
-        if (object_span == 1)
+        if (object_span <= 2)
         {
-            left = right = objects[start];
-        }
-        else if (object_span == 2)
-        {
+            // Base case: create leaf node
             left = objects[start];
-            right = objects[start + 1];
+            right = (object_span == 2) ? objects[start + 1] : objects[start];
         }
         else
         {
-            std::sort(std::begin(objects) + start, std::begin(objects) + end, comparator);
+            // Compute centroid bounds
+            aabb centroid_bounds = aabb::empty;
+            for (size_t i = start; i < end; ++i)
+            {
+                point3 centroid = objects[i]->bounding_box().centroid();
+                centroid_bounds = surrounding_box(centroid_bounds, aabb(centroid, centroid));
+            }
+            int axis = centroid_bounds.longest_axis();
 
-            auto mid = start + object_span / 2;
-            left = make_shared<bvh_node>(objects, start, mid);
-            right = make_shared<bvh_node>(objects, mid, end);
+            // Binning parameters
+            constexpr int BIN_COUNT = 16;
+            struct Bin
+            {
+                aabb bounds = aabb::empty;
+                int count = 0;
+            };
+            Bin bins[BIN_COUNT];
+
+            // Assign primitives to bins
+            for (size_t i = start; i < end; ++i)
+            {
+                double centroid = objects[i]->bounding_box().centroid()[axis];
+                double relative = (centroid - centroid_bounds.axis_interval(axis).min) / centroid_bounds.axis_interval(axis).size();
+                int bin_index = std::min(static_cast<int>(relative * BIN_COUNT), BIN_COUNT - 1);
+                bins[bin_index].bounds = surrounding_box(bins[bin_index].bounds, objects[i]->bounding_box());
+                bins[bin_index].count++;
+            }
+
+            // Compute SAH costs
+            aabb left_bounds[BIN_COUNT - 1];
+            aabb right_bounds[BIN_COUNT - 1];
+            int left_counts[BIN_COUNT - 1] = {0};
+            int right_counts[BIN_COUNT - 1] = {0};
+
+            aabb left_box = aabb::empty;
+            int left_count = 0;
+            for (int i = 0; i < BIN_COUNT - 1; ++i)
+            {
+                left_box = surrounding_box(left_box, bins[i].bounds);
+                left_bounds[i] = left_box;
+                left_count += bins[i].count;
+                left_counts[i] = left_count;
+            }
+
+            aabb right_box = aabb::empty;
+            int right_count = 0;
+            for (int i = BIN_COUNT - 1; i > 0; --i)
+            {
+                right_box = surrounding_box(right_box, bins[i].bounds);
+                right_counts[i - 1] = right_count;
+                right_bounds[i - 1] = right_box;
+                right_count += bins[i].count;
+            }
+
+            // Find the best split
+            double min_cost = std::numeric_limits<double>::infinity();
+            int min_index = 0;
+            for (int i = 0; i < BIN_COUNT - 1; ++i)
+            {
+                double cost = left_counts[i] * left_bounds[i].surface_area() +
+                              right_counts[i] * right_bounds[i].surface_area();
+                if (cost < min_cost)
+                {
+                    min_cost = cost;
+                    min_index = i;
+                }
+            }
+
+            // Partition primitives based on the best split
+            auto mid = std::partition(objects.begin() + start, objects.begin() + end,
+                                      [&](const shared_ptr<hittable> &obj)
+                                      {
+                                          double centroid = obj->bounding_box().centroid()[axis];
+                                          double relative = (centroid - centroid_bounds.axis_interval(axis).min) / centroid_bounds.axis_interval(axis).size();
+                                          int bin_index = std::min(static_cast<int>(relative * BIN_COUNT), BIN_COUNT - 1);
+                                          return bin_index <= min_index;
+                                      });
+
+            size_t mid_index = mid - objects.begin();
+
+           // Fallback to median split if partitioning fails
+            if (mid_index == start || mid_index == end)
+            {
+                std::clog << "Fallback to median split" << std::endl;
+                auto comparator = (axis == 0)   ? box_x_compare
+                                  : (axis == 1) ? box_y_compare
+                                                : box_z_compare;
+                std::sort(objects.begin() + start, objects.begin() + end, comparator);
+                mid_index = start + object_span / 2;
+            }
+
+            left = make_shared<bvh_node>(objects, start, mid_index);
+            right = make_shared<bvh_node>(objects, mid_index, end);
         }
 
+        // Compute bounding box for this node
+        bbox = surrounding_box(left->bounding_box(), right->bounding_box());
     }
-
-    // bvh_node(std::vector<shared_ptr<hittable>> &objects, size_t start, size_t end)
-    // {
-    //     bbox = compute_bounding_box(objects, start, end); // Precomputed bounding boxes
-
-    //     if (end - start <= 4)
-    //     {
-    //         // Create leaf node
-    //         left = right = objects[start];
-    //         return;
-    //     }
-
-    //     // Find the best split using SAH or another splitting heuristic
-    //     std::pair<size_t, int> result = find_best_split(objects, start, end);
-    //     size_t split = result.first;
-    //     int axis = result.second;
-
-    //     // Sort objects along the best axis
-    //     std::sort(std::begin(objects)+ start, std::begin(objects)+ end,
-    //               [axis](const shared_ptr<hittable> &a, const shared_ptr<hittable> &b)
-    //               {
-    //                   return a->bounding_box().axis_interval(axis).min < b->bounding_box().axis_interval(axis).min;
-    //               });
-
-    //     // Recursively build left and right subtrees sequentially
-    //     left = std::make_shared<bvh_node>(objects, start, split);
-    //     right = std::make_shared<bvh_node>(objects, split, end);
-    // }
 
     bool hit(const ray &r, interval ray_t, hit_record &rec) const override
     {

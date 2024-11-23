@@ -85,7 +85,15 @@ class aabb {
 
     double surface_area() const
     {
-        return 4.0;
+        double dx = x.size();
+        double dy = y.size();
+        double dz = z.size();
+        return 2.0 * (dx * dy + dx * dz + dy * dz);
+    }
+
+    vec3 centroid() const
+    {
+        return vec3(x.midpoint(), y.midpoint(), z.midpoint());
     }
 
     static const aabb empty, universe;
@@ -102,6 +110,21 @@ private:
         if (z.size() < delta) z = z.expand(delta);
     }
 };
+
+inline aabb surrounding_box(const aabb &box0, const aabb &box1)
+{
+    interval x(
+        std::min(box0.x.min, box1.x.min),
+        std::max(box0.x.max, box1.x.max));
+    interval y(
+        std::min(box0.y.min, box1.y.min),
+        std::max(box0.y.max, box1.y.max));
+    interval z(
+        std::min(box0.z.min, box1.z.min),
+        std::max(box0.z.max, box1.z.max));
+
+    return aabb(x, y, z);
+}
 
 const aabb aabb::empty    = aabb(interval::empty,    interval::empty,    interval::empty);
 const aabb aabb::universe = aabb(interval::universe, interval::universe, interval::universe);

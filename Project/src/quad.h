@@ -7,12 +7,12 @@
 class quad : public hittable
 {
 public:
-    quad(const point3 &Q, const vec3 &u, const vec3 &v, shared_ptr<material> mat)
-        : Q(Q), u(u), v(v), mat(mat)
+    quad(const point3 &_corner, const vec3 &_sideA, const vec3 &_sideB, shared_ptr<material> mat)
+        : corner(_corner), sideA(_sideA), sideB(_sideB), mat(mat)
     {
-        auto n = cross(u, v);
+        auto n = cross(sideA, sideB);
         normal = unit_vector(n);
-        D = dot(normal, Q);
+        D = dot(normal, _corner);
         w = n / dot(n, n);
 
         area = n.length();
@@ -23,8 +23,8 @@ public:
     virtual void set_bounding_box()
     {
         // Compute the bounding box of all four vertices.
-        auto bbox_diagonal1 = aabb(Q, Q + u + v);
-        auto bbox_diagonal2 = aabb(Q + u, Q + v);
+        auto bbox_diagonal1 = aabb(corner, corner + sideA + sideB);
+        auto bbox_diagonal2 = aabb(corner + sideA, corner + sideB);
         bbox = aabb(bbox_diagonal1, bbox_diagonal2);
     }
 
@@ -45,9 +45,9 @@ public:
 
         // Determine if the hit point lies within the planar shape using its plane coordinates.
         auto intersection = r.at(t);
-        vec3 planar_hitpt_vector = intersection - Q;
-        auto alpha = dot(w, cross(planar_hitpt_vector, v));
-        auto beta = dot(w, cross(u, planar_hitpt_vector));
+        vec3 planar_hitpt_vector = intersection - corner;
+        auto alpha = dot(w, cross(planar_hitpt_vector, sideB));
+        auto beta = dot(w, cross(sideA, planar_hitpt_vector));
 
         if (!is_interior(alpha, beta, rec))
             return false;
@@ -89,13 +89,13 @@ public:
 
     vec3 random(const point3 &origin) const override
     {
-        auto p = Q + (random_double() * u) + (random_double() * v);
+        auto p = corner + (random_double() * sideA) + (random_double() * sideB);
         return p - origin;
     }
 
-private:
-    point3 Q;
-    vec3 u, v;
+protected:
+    point3 corner;
+    vec3 sideA, sideB;
     vec3 w;
     shared_ptr<material> mat;
     aabb bbox;
@@ -131,8 +131,8 @@ inline shared_ptr<hittable_list> box(const point3 &a, const point3 &b, shared_pt
 class tri : public quad
 {
 public:
-    tri(const point3 &p0, const point3 &p1, const point3 &p2, shared_ptr<material> m)
-        : quad(p0, p1 - p0, p2 - p0, m)
+    tri(const point3 &o, const vec3 &aa, const vec3 &ab, shared_ptr<material> m, const vec3 &uv0, const vec3 &uv1, const vec3 &uv2)
+        : quad(o, aa, ab, m), uv0(uv0), uv1(uv1), uv2(uv2)
     {
     }
 
@@ -141,10 +141,121 @@ public:
         if ((a < 0) || (b < 0) || (a + b > 1))
             return false;
 
-        rec.u = a;
-        rec.v = b;
+        double c = 1.0 - a - b;
+
+        // Interpolate UV coordinates
+        rec.u = uv0.x() * c + uv1.x() * a + uv2.x() * b;
+        rec.v = uv0.y() * c + uv1.y() * a + uv2.y() * b;
         return true;
     }
+
+private:
+    vec3 uv0, uv1, uv2;
 };
+
+// class tri : public hittable
+// {
+// public:
+//     tri(const point3 &v0, const point3 &v1, const point3 &v2,
+//         shared_ptr<material> m, const vec3 &uv0, const vec3 &uv1, const vec3 &uv2)
+//         : v0(v0), v1(v1), v2(v2), mat_ptr(m), uv0(uv0), uv1(uv1), uv2(uv2)
+//     {
+//         // Precompute the normal for the triangle
+//         normal = unit_vector(cross(v1 - v0, v2 - v0));
+//         area = 0.5 * cross(v1 - v0, v2 - v0).length();
+//         set_bounding_box();
+//     }
+
+//     virtual bool hit(const ray &r, interval ray_t, hit_record &rec) const override
+//     {
+//         // Edge vectors
+//         vec3 edge1 = v1 - v0;
+//         vec3 edge2 = v2 - v0;
+
+//         // Compute the determinant
+//         vec3 h = cross(r.direction(), edge2);
+//         double a = dot(edge1, h);
+
+//         // If the determinant is near zero, the ray is parallel to the triangle
+//         if (fabs(a) < 1e-8)
+//             return false;
+
+//         double f = 1.0 / a;
+//         vec3 s = r.origin() - v0;
+//         double u = f * dot(s, h);
+
+//         if (u < 0.0 || u > 1.0)
+//             return false;
+
+//         vec3 q = cross(s, edge1);
+//         double v = f * dot(r.direction(), q);
+
+//         if (v < 0.0 || u + v > 1.0)
+//             return false;
+
+//         // At this stage, we can compute t to find out where the intersection point is on the line
+//         double t = f * dot(edge2, q);
+
+//         if (t < ray_t.min || t > ray_t.max)
+//             return false;
+
+//         // Set hit record
+//         rec.t = t;
+//         rec.p = r.at(t);
+//         rec.set_face_normal(r, normal);
+
+//         // Interpolate UV coordinates
+//         double w = 1.0 - u - v;
+//         rec.u = w * uv0.x() + u * uv1.x() + v * uv2.x();
+//         rec.v = w * uv0.y() + u * uv1.y() + v * uv2.y();
+
+//         rec.mat = mat_ptr;
+
+//         return true;
+//     }
+
+//     aabb bounding_box() const override { return bbox; }
+
+//     virtual void set_bounding_box()
+//     {
+//         // Compute the bounding box of the triangle vertices.
+//         point3 min_point(fmin(v0.x(), fmin(v1.x(), v2.x())),
+//                          fmin(v0.y(), fmin(v1.y(), v2.y())),
+//                          fmin(v0.z(), fmin(v1.z(), v2.z())));
+//         point3 max_point(fmax(v0.x(), fmax(v1.x(), v2.x())),
+//                          fmax(v0.y(), fmax(v1.y(), v2.y())),
+//                          fmax(v0.z(), fmax(v1.z(), v2.z())));
+
+//         bbox = aabb(min_point, max_point);
+//     }
+
+//     double pdf_value(const point3 &origin, const vec3 &direction) const override
+//     {
+//         hit_record rec;
+//         if (!this->hit(ray(origin, direction), interval(0.001, infinity), rec))
+//             return 0;
+
+//         auto distance_squared = rec.t * rec.t * direction.length_squared();
+//         auto cosine = std::fabs(dot(direction, rec.normal) / direction.length());
+
+//         return distance_squared / (cosine * area);
+//     }
+
+//     vec3 random(const point3 &origin) const override
+//     {
+//         auto r1 = sqrt(random_double());
+//         auto r2 = random_double();
+//         auto p = (1 - r1) * v0 + r1 * (1 - r2) * v1 + r1 * r2 * v2;
+//         return p - origin;
+//     }
+
+// private:
+//     point3 v0, v1, v2; // Triangle vertices
+//     vec3 normal;       // Precomputed normal
+//     shared_ptr<material> mat_ptr;
+//     vec3 uv0, uv1, uv2; // UV coordinates for each vertex
+//     double area;        // Area of the triangle
+//     aabb bbox;
+// };
 
 #endif
