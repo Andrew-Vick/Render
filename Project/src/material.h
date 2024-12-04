@@ -138,7 +138,7 @@ public:
     double attenuation = std::exp(-(absorption_coef + scattering_coef) * distance);
     srec.attenuation = albedo * scattering_col * attenuation;
     srec.skip_pdf = true;
-    srec.skip_pdf_ray = ray(scatter_origin, scatter_dir, r_in.time(), r_in.wavelength());
+    srec.skip_pdf_ray = ray(scatter_origin, scatter_dir, r_in.time());
     return true;
   }
 
@@ -162,7 +162,7 @@ public:
     srec.attenuation = albedo;
     srec.pdf_ptr = nullptr;
     srec.skip_pdf = true;
-    srec.skip_pdf_ray = ray(rec.p, reflected, r_in.time(), r_in.wavelength());
+    srec.skip_pdf_ray = ray(rec.p, reflected, r_in.time());
 
     return true;
   }
@@ -211,71 +211,6 @@ class dielectric : public material
       auto r0 = (1 - refraction_index) / (1 + refraction_index);
       r0 = r0 * r0;
       return r0 + (1 - r0) * std::pow((1 - cosine), 5);
-    }
-  };
-
-  class dielectric_new : public material
-  {
-  public:
-    dielectric_new(double base_ior, const color &absorption_coeff)
-        : base_ior(base_ior), absorption_coeff(absorption_coeff) {}
-
-    bool scatter(const ray &r_in, const hit_record &rec, scatter_record &srec) const override
-    {
-      srec.attenuation = calculate_attenuation(r_in, rec);
-      srec.skip_pdf = true;
-
-      double wavelength = r_in.wavelength();
-      double ior = refractive_index(wavelength);
-      double refraction_ratio = rec.front_face ? (1.0 / ior) : ior;
-
-      vec3 unit_direction = unit_vector(r_in.direction());
-      double cos_theta = fmin(dot(-unit_direction, rec.normal), 1.0);
-      double sin_theta = sqrt(1.0 - cos_theta * cos_theta);
-
-      bool cannot_refract = refraction_ratio * sin_theta > 1.0;
-      vec3 direction;
-
-      if (cannot_refract || reflectance(cos_theta, refraction_ratio) > random_double())
-        direction = reflect(unit_direction, rec.normal);
-      else
-        direction = refract(unit_direction, rec.normal, refraction_ratio);
-
-      srec.skip_pdf_ray = ray(rec.p, direction, r_in.time(), wavelength);
-      return true;
-    }
-
-  private:
-    double base_ior;
-    color absorption_coeff; // Wavelength-dependent absorption coefficients
-
-    color calculate_attenuation(const ray &r_in, const hit_record &rec) const
-    {
-      // Calculate the distance traveled inside the material
-      double distance = (rec.front_face ? 0.0 : -dot(r_in.direction(), rec.normal)) * rec.t;
-
-      // Use Beer-Lambert law for attenuation: I = I0 * exp(-alpha * distance)
-      // alpha is the absorption coefficient
-      return color(std::exp(-absorption_coeff.x() * distance),
-                   std::exp(-absorption_coeff.y() * distance),
-                   std::exp(-absorption_coeff.z() * distance));
-    }
-
-    double refractive_index(double wavelength) const
-    {
-      // Cauchy's equation: n(λ) = A + (B / λ^2)
-      double lambda = wavelength * 1e-3; // Convert nm to μm
-      double A = base_ior;
-      double B = 0.004; // Adjust based on material
-      return A + B / (lambda * lambda);
-    }
-
-    static double reflectance(double cosine, double ref_idx)
-    {
-      // Schlick's approximation
-      double r0 = (1 - ref_idx) / (1 + ref_idx);
-      r0 *= r0;
-      return r0 + (1 - r0) * pow((1 - cosine), 5);
     }
   };
 

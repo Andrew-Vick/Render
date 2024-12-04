@@ -24,7 +24,7 @@
  * (x, y, z); (r, g, b): 3D coordinates and RGB color
  *
  * COORDINATE SYSTEM:
- * X-axis: +X is to the left, -x is to the right
+ * X-axis: +X is to the right, -x is to the right
  * Y-axis: Vertical axis (bottom to top)
  * Z-axis: Depth axis (front to back) -- +Z is towards the camera
  *
@@ -743,8 +743,9 @@ void prism()
   hittable_list world;
   hittable_list lights;
 
-  auto glass = make_shared<dielectric_new>(1.5, color(0.1, 0.01, 0.001)); // Example for colored glass
+  auto glass = make_shared<dielectric>(1.5); // Example for colored glass
   auto white = make_shared<lambertian>(color(0.73, 0.73, 0.73));
+  auto blue = make_shared<lambertian>(color(0.1, 0.2, 0.5));
   auto empty_material = shared_ptr<material>();
 
   std::vector<Mesh> meshes;
@@ -784,13 +785,15 @@ void prism()
     return;
   }
 
+  world_objects.add(make_shared<quad>(point3(-50, 0, 50), vec3(100, 0, 0), vec3(0, 50, 0), white)); // back
+
   world_objects.add(make_shared<sphere>(
       point3(0, -1000, 0), 1000, white)); // Adjusted to a darker green
 
   world_objects.add(make_shared<sphere>(
       point3(0, 50, 0),                     // Center of the sphere
       10,                                           // Radius of the light
-      make_shared<diffuse_light>(color(20, 20, 20)) // Bright light
+      make_shared<diffuse_light>(color(30, 30, 30)) // Bright light
       ));
 
     lights.add(make_shared<sphere>(
@@ -805,11 +808,11 @@ void prism()
 
   cam.aspect_ratio = 1.0;
   cam.image_width = 600;
-  cam.samples_per_pixel = 300;
+  cam.samples_per_pixel = 50;
   cam.max_depth = 10;
-  cam.set_background(make_shared<solid_color>(color(0.529, 0.807, 0.922)), false);
+  cam.set_background(make_shared<solid_color>(color(0, 0, 0)), false);
 
-  cam.lookfrom = point3(0, 10, -15); // Position the camera in front of the prism
+  cam.lookfrom = point3(0, 10, -30); // Position the camera in front of the prism
   cam.lookat = point3(0, 0, 0);  // Focus on the prism center
   cam.vfov = 45;                         // Narrow field of view for focused observation
 

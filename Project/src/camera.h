@@ -194,9 +194,7 @@ private:
 
     auto ray_time = random_double();
 
-    double wavelength = random_double(380.0, 780.0);
-
-    return ray(ray_origin, ray_direction, ray_time, wavelength);
+    return ray(ray_origin, ray_direction, ray_time);
   }
 
   vec3 sample_square_stratified(int s_i, int s_j) const
@@ -262,17 +260,15 @@ private:
     auto light_ptr = make_shared<hittable_pdf>(lights, rec.p);
     mixture_pdf p(light_ptr, srec.pdf_ptr);
 
-    ray scattered = ray(rec.p, p.generate(), r.time(), r.wavelength());
+    ray scattered = ray(rec.p, p.generate(), r.time());
     auto pdf_value = p.value(scattered.direction());
 
     double scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
 
     color sample_color = ray_color(scattered, depth - 1, world, lights);
 
-    color wavelength_color = wavelength_to_rgb(r.wavelength());
-
     color color_from_scatter =
-        (srec.attenuation * scattering_pdf * sample_color * wavelength_color) / pdf_value;
+        (srec.attenuation * scattering_pdf * sample_color ) / pdf_value;
 
     return color_from_emission + color_from_scatter;
   }
