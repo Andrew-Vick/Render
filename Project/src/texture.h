@@ -211,5 +211,65 @@ private:
   }
 };
 
+class grass_texture : public texture
+{
+public:
+  grass_texture() {}
+  grass_texture(double sc) : scale(sc) {}
+
+  virtual color value(double u, double v, const point3 &p) const override
+  {
+    // Generate Perlin noise value
+    double noise_value = 0.5 * (1 + noise.noise(scale * p));
+
+    // Map the noise value to a grass color
+    color grass_color = (1 - noise_value) * color(0.1, 0.4, 0.1) + noise_value * color(0.2, 0.5, 0.2);
+
+    return grass_color;
+  }
+
+public:
+  perlin noise;
+  double scale;
+};
+
+class bump_texture : public texture
+{
+public:
+  bump_texture() {}
+  bump_texture(double sc, double amp) : scale(sc), amplitude(amp) {}
+
+  // Returns a vector to perturb the normal
+  virtual color value(double u, double v, const point3 &p) const override
+  {
+    double noise_value = noise.noise(scale * p);
+    return color(1, 1, 1) * noise_value * amplitude;
+  }
+
+public:
+  perlin noise;
+  double scale;
+  double amplitude;
+};
+
+class normal_map_texture : public texture
+{
+public:
+  normal_map_texture() {}
+  normal_map_texture(double sc, double amp) : scale(sc), amplitude(amp) {}
+
+  virtual color value(double u, double v, const point3 &p) const override
+  {
+    // Generate noise value for perturbation
+    double noise_value = noise.noise(scale * p);
+    // Compute the perturbation vector in tangent space
+    return amplitude * vec3(noise_value, noise_value, noise_value);
+  }
+
+private:
+  perlin noise;
+  double scale;
+  double amplitude;
+};
 
 #endif

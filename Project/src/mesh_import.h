@@ -201,6 +201,35 @@ public:
             triangles.push_back(make_shared<tri>(p0, aa, ab, mat, uv0, uv1, uv2));
         }
     }
+
+    void mesh_to_tri_mat(const Mesh &mesh, std::vector<shared_ptr<hittable>> &triangles, shared_ptr<material> mat)
+    {
+        for (size_t i = 0; i < mesh.indices.size(); i += 3)
+        {
+            unsigned int idx0 = mesh.indices[i];
+            unsigned int idx1 = mesh.indices[i + 1];
+            unsigned int idx2 = mesh.indices[i + 2];
+
+            // Ensure indices are within bounds
+            if (idx0 >= mesh.vertices.size() || idx1 >= mesh.vertices.size() || idx2 >= mesh.vertices.size())
+                continue;
+
+            const Vertex &v0 = mesh.vertices[idx0];
+            const Vertex &v1 = mesh.vertices[idx1];
+            const Vertex &v2 = mesh.vertices[idx2];
+
+            // Apply scaling and translation to vertex positions
+            point3 p0 = point3(v0.position[0], v0.position[1], v0.position[2]);
+            point3 p1 = point3(v1.position[0], v1.position[1], v1.position[2]);
+            point3 p2 = point3(v2.position[0], v2.position[1], v2.position[2]);
+
+            // Compute edge vectors for the triangle
+            vec3 aa = p1 - p0;
+            vec3 ab = p2 - p0;
+
+            triangles.push_back(make_shared<triangle>(p0, aa, ab, mat));
+        }
+    }
 };
 
 #endif

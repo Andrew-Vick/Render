@@ -59,7 +59,7 @@ public:
                     active_tasks--;
                     if (active_tasks <= 0) {
                         done.notify_all();
-                        std::clog << "\nDone.                           " << std::flush;
+                        std::clog << "\nDone.    " << std::flush;
                     }
                 } });
         }

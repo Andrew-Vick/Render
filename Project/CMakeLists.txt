@@ -25,6 +25,7 @@ set ( SOURCE_ONE_WEEKEND
   src/onb.h
   src/pdf.h
   src/perlin.h
+  src/post_process.h
   src/quad.h
   src/ray.h
   src/thread_pool.h
