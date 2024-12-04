@@ -10,45 +10,21 @@ class post_process
 {
 public:
     // Apply bloom and glare effects to an HDR image
-    // Adjusted apply_bloom function
     void apply_bloom(std::vector<color> &hdr_image, int width, int height)
     {
-        const double threshold = 100.0;       // Lower threshold to include more lights
-        const double bloom_intensity = 0.01; // Adjust as needed
-        const double glare_intensity = 0.05; // Adjust as needed
-
-        // Step 1: Calculate maximum luminance (optional adjustment)
-        // double max_luminance = calculate_max_luminance(hdr_image);
-
-        // Step 2: Extract bright areas
+        const double threshold = 5.0; 
         std::vector<color> bright_pass = extract_bright_areas(hdr_image, threshold);
 
-        // Step 3: Apply Gaussian blur for bloom effect
         std::vector<color> blurred_image = gaussian_blur(bright_pass, width, height, 10);
 
-        // Step 4: Create star-shaped kernel for glare and apply it
-        const int kernel_size = 31; // Increased size for longer streaks
+        const int kernel_size = 31; 
         std::vector<double> star_kernel = create_star_kernel(kernel_size);
         std::vector<color> glare_image = convolve(bright_pass, star_kernel, width, height, kernel_size);
 
-        // Step 5: Combine effects without scaling by max_luminance
-        combine_effects(hdr_image, blurred_image, glare_image, bloom_intensity, glare_intensity);
+        combine_effects(hdr_image, blurred_image, glare_image);
     }
 
 private:
-    // Calculate the maximum luminance in the image
-    double calculate_max_luminance(const std::vector<color> &image)
-    {
-        double max_luminance = 0.0;
-        for (const auto &pixel : image)
-        {
-            double luminance = 0.2126 * pixel.x() + 0.7152 * pixel.y() + 0.0722 * pixel.z();
-            if (luminance > max_luminance)
-                max_luminance = luminance;
-        }
-        return max_luminance;
-    }
-
     // Extract bright areas based on a luminance threshold
     std::vector<color> extract_bright_areas(const std::vector<color> &image, double threshold)
     {
@@ -65,19 +41,20 @@ private:
     void combine_effects(
         std::vector<color> &image,
         const std::vector<color> &blurred_image,
-        const std::vector<color> &glare_image,
-        double bloom_intensity,
-        double glare_intensity)
+        const std::vector<color> &glare_image)
     {
         for (size_t i = 0; i < image.size(); ++i)
         {
-            // Removed intensity_factor to make effects more prominent
+            double luminance = image[i].length();
+            double bloom_intensity = luminance / 100.0; // Scale factor for bloom
+            double glare_intensity = luminance / 50.0;  // Scale factor for glare
+
             image[i] += blurred_image[i] * bloom_intensity;
             image[i] += glare_image[i] * glare_intensity;
         }
     }
 
-    // Adjusted create_star_kernel function
+    // Create a star-shaped kernel for glare effect
     std::vector<double> create_star_kernel(int kernel_size)
     {
         std::vector<double> star_kernel(kernel_size * kernel_size, 0.0);

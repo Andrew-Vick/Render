@@ -274,113 +274,6 @@ void simple_light()
   cam.defocus_angle = 0;
 
   // cam.redner(world, lights);
-}
-
-void cornell_box()
-{
-  hittable_list world;
-
-  auto red = make_shared<lambertian>(color(.65, .05, .05));
-  auto white = make_shared<lambertian>(color(0.89, 0.67, 0.59));
-  auto green = make_shared<lambertian>(color(.12, .45, .15));
-  auto blue = make_shared<lambertian>(color(.15, .15, .65));
-  auto purple = make_shared<lambertian>(color(.65, .05, .65));
-  auto light = make_shared<diffuse_light>(color(45, 45, 45));
-  auto empty_material = shared_ptr<material>();
-
-  hittable_list world_objects;
-
-  // Cornell box sides
-  world_objects.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 0, 555), vec3(0, 555, 0), green)); // left
-
-  /**
-   * the right wall's corner is at x = 0, y = 0, its z is away from the camera at 555, floor vector is pointing to x = 0, y=0, z-555(coming at you)
-   * the vector for height is starting at x = 0, z =0 and it pointing up to 555
-   *
-   * bottom corner is away from camera at bottom right and is drawn using vector coming to you and going up from the origin
-   */
-  world_objects.add(make_shared<quad>(point3(0, 0, 555), vec3(0, 0, -555), vec3(0, 555, 0), red)); // right
-
-  world_objects.add(make_shared<quad>(point3(0, 555, 0), vec3(555, 0, 0), vec3(0, 0, 555), blue));    // ceiling
-  world_objects.add(make_shared<quad>(point3(0, 0, 555), vec3(555, 0, 0), vec3(0, 0, -555), purple)); // floor
-
-  // this will create a back wall
-  // world_objects.add(make_shared<quad>(point3(555, 0, 555), vec3(-555, 0, 0), vec3(0, 555, 0), white)); //back
-
-  auto wall_material = make_shared<lambertian>(color(1.0, 1.0, 1.0)); // White wall material
-  auto glass_material = make_shared<dielectric>(1.5);                 // Glass material for the window
-
-  // Dimensions
-  double wall_width = 555;
-  double wall_height = 555;
-  double window_width = 200;
-  double window_height = 200;
-  double window_x_offset = (wall_width - window_width) / 2;   // Center the window horizontally
-  double window_y_offset = (wall_height - window_height) / 2; // Center the window vertically
-
-  // Sun sphere outside room
-  double intensity = 500.0; // Adjust intensity as needed
-  color sunlight_emit = intensity * color(0.98, 0.58, 0.0039);
-  auto sunlight_material = make_shared<diffuse_light>(sunlight_emit); // Bright sunlight
-  world_objects.add(make_shared<sphere>(point3(555 - window_x_offset - window_width, 450, 700), 100, sunlight_material));
-
-  // Ground
-  world_objects.add(make_shared<sphere>(point3(0, -1000, 0), 1000, make_shared<lambertian>(color(0, 1, 0))));
-
-  // dust in room
-  world_objects.add(make_shared<constant_medium>(box(point3(555,555,555), point3(0,0,0), empty_material), 0.001, color(0.89, 0.8, 0.78)));
-
-  // Back Wall (4 surrounding quads + glass center)
-  // Bottom part of wall
-  world_objects.add(make_shared<quad>(
-      point3(555, 0, 555),         // Bottom-left corner of the bottom quad
-      vec3(-555, 0, 0),            // Full width to the left
-      vec3(0, window_y_offset, 0), // Up to the bottom of the window
-      wall_material));
-
-  // Top part of wall
-  world_objects.add(make_shared<quad>(
-      point3(555, window_y_offset + window_height, 555),         // Bottom-left corner of the top quad
-      vec3(-wall_width, 0, 0),                                   // Full width to the left
-      vec3(0, wall_height - window_y_offset - window_height, 0), // Up to the ceiling
-      wall_material));
-
-  // // Left part of wall
-  world_objects.add(make_shared<quad>(
-      point3(555, window_y_offset, 555), // Bottom-left corner of the left quad
-      vec3(-window_x_offset, 0, 0),      // Width to the left of the window
-      vec3(0, window_height, 0),         // Height of the window
-      wall_material));
-
-  // Right part of wall
-  world_objects.add(make_shared<quad>(
-      point3(555 - window_x_offset - window_width, window_y_offset, 555), // Bottom-left corner of the right quad
-      vec3(-180, 0, 0),                                                   // Width to the right of the window
-      vec3(0, window_height, 0),                                          // Height of the window
-      wall_material));
-
-  // Center glass window
-  world_objects.add(make_shared<quad>(
-      point3(555 - window_x_offset, window_y_offset, 555), // Bottom-left corner of the glass quad
-      vec3(-window_width, 0, 0),                           // Window width
-      vec3(0, window_height, 0),                           // Window height
-      glass_material));
-
-  // Light
-  world_objects.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
-
-  // Box
-  auto earth_texture = make_shared<image_texture>("earthmap.jpg");
-  auto earth = make_shared<lambertian>(earth_texture);
-  shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), earth);
-  box1 = make_shared<rotate_y>(box1, 15);
-  box1 = make_shared<translate>(box1, vec3(265, 0, 295));
-  world_objects.add(box1);
-
-  shared_ptr<hittable> box2 = box(point3(0, 0, 0), point3(165, 165, 165), white);
-  box2 = make_shared<rotate_y>(box2, -18);
-  box2 = make_shared<translate>(box2, vec3(130, 0, 65));
-  world_objects.add(box2);
 
   // Load and convert mesh to triangles
   // std::vector<Mesh> meshes;
@@ -419,6 +312,113 @@ void cornell_box()
   //   std::cerr << "Failed to load the mesh!" << std::endl;
   //   return;
   // }
+}
+
+void cornell_box()
+{
+  hittable_list world;
+
+  auto red = make_shared<lambertian>(color(.65, .05, .05));
+  auto white = make_shared<lambertian>(color(0.89, 0.67, 0.59));
+  auto green = make_shared<lambertian>(color(.12, .45, .15));
+  auto blue = make_shared<lambertian>(color(.15, .15, .65));
+  auto purple = make_shared<lambertian>(color(.65, .05, .65));
+  auto light = make_shared<diffuse_light>(color(15, 15, 15));
+  auto empty_material = shared_ptr<material>();
+
+  hittable_list world_objects;
+
+  // Cornell box sides
+  world_objects.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 0, 555), vec3(0, 555, 0), green)); // left
+
+  /**
+   * the right wall's corner is at x = 0, y = 0, its z is away from the camera at 555, floor vector is pointing to x = 0, y=0, z-555(coming at you)
+   * the vector for height is starting at x = 0, z =0 and it pointing up to 555
+   *
+   * bottom corner is away from camera at bottom right and is drawn using vector coming to you and going up from the origin
+   */
+  world_objects.add(make_shared<quad>(point3(0, 0, 555), vec3(0, 0, -555), vec3(0, 555, 0), red)); // right
+
+  world_objects.add(make_shared<quad>(point3(0, 555, 0), vec3(555, 0, 0), vec3(0, 0, 555), blue));    // ceiling
+  world_objects.add(make_shared<quad>(point3(0, 0, 555), vec3(555, 0, 0), vec3(0, 0, -555), purple)); // floor
+
+  // this will create a back wall
+  // world_objects.add(make_shared<quad>(point3(555, 0, 555), vec3(-555, 0, 0), vec3(0, 555, 0), white)); //back
+
+  auto wall_material = make_shared<lambertian>(color(1.0, 1.0, 1.0)); // White wall material
+  auto glass_material = make_shared<dielectric>(1.5);                 // Glass material for the window
+
+  // Dimensions
+  double wall_width = 555;
+  double wall_height = 555;
+  double window_width = 200;
+  double window_height = 200;
+  double window_x_offset = (wall_width - window_width) / 2;   // Center the window horizontally
+  double window_y_offset = (wall_height - window_height) / 2; // Center the window vertically
+
+  // Sun sphere outside room
+  double intensity = 50.0;
+  color sunlight_emit = intensity * color(0.98, 0.58, 0.0039);
+  auto sunlight_material = make_shared<diffuse_light>(sunlight_emit); 
+  world_objects.add(make_shared<sphere>(point3(555 - window_x_offset - window_width, 450, 700), 100, sunlight_material));
+
+  // Ground
+  world_objects.add(make_shared<sphere>(point3(0, -1000, 0), 1000, make_shared<lambertian>(color(0, 1, 0))));
+
+  // dust in room
+  world_objects.add(make_shared<constant_medium>(box(point3(555,555,555), point3(0,0,0), empty_material), 0.001, color(0.89, 0.8, 0.78)));
+
+  // Back Wall (4 surrounding quads + glass center)
+  // Bottom part of wall
+  world_objects.add(make_shared<quad>(
+      point3(555, 0, 555),        
+      vec3(-555, 0, 0),            
+      vec3(0, window_y_offset, 0), 
+      wall_material));
+
+  // Top part of wall
+  world_objects.add(make_shared<quad>(
+      point3(555, window_y_offset + window_height, 555),         
+      vec3(-wall_width, 0, 0),                                   
+      vec3(0, wall_height - window_y_offset - window_height, 0), 
+      wall_material));
+
+  // // Left part of wall
+  world_objects.add(make_shared<quad>(
+      point3(555, window_y_offset, 555), 
+      vec3(-window_x_offset, 0, 0),     
+      vec3(0, window_height, 0),         
+      wall_material));
+
+  // Right part of wall
+  world_objects.add(make_shared<quad>(
+      point3(555 - window_x_offset - window_width, window_y_offset, 555), 
+      vec3(-180, 0, 0),                                                   
+      vec3(0, window_height, 0),                                          
+      wall_material));
+
+  // Center glass window
+  world_objects.add(make_shared<quad>(
+      point3(555 - window_x_offset, window_y_offset, 555), 
+      vec3(-window_width, 0, 0),                           
+      vec3(0, window_height, 0),                           
+      glass_material));
+
+  // Light
+  world_objects.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), light));
+
+  // Box
+  auto earth_texture = make_shared<image_texture>("earthmap.jpg");
+  auto earth = make_shared<lambertian>(earth_texture);
+  shared_ptr<hittable> box1 = box(point3(0, 0, 0), point3(165, 330, 165), earth);
+  box1 = make_shared<rotate_y>(box1, 15);
+  box1 = make_shared<translate>(box1, vec3(265, 0, 295));
+  world_objects.add(box1);
+
+  shared_ptr<hittable> box2 = box(point3(0, 0, 0), point3(165, 165, 165), white);
+  box2 = make_shared<rotate_y>(box2, -18);
+  box2 = make_shared<translate>(box2, vec3(130, 0, 65));
+  world_objects.add(box2);
 
   world_objects.add(make_shared<quad>(point3(343, 554, 332), vec3(-130, 0, 0), vec3(0, 0, -105), white));
 
@@ -737,95 +737,6 @@ void stars()
   cam.render(world, lights, pool);
 }
 
-void prism()
-{
-  hittable_list world_objects;
-  hittable_list world;
-  hittable_list lights;
-
-  auto glass = make_shared<dielectric>(1.5); // Example for colored glass
-  auto white = make_shared<lambertian>(color(0.73, 0.73, 0.73));
-  auto blue = make_shared<lambertian>(color(0.1, 0.2, 0.5));
-  auto empty_material = shared_ptr<material>();
-
-  std::vector<Mesh> meshes;
-  hittable_list mesh_list;
-  if (MeshImporter::LoadMesh("/Users/andrewvick/Coms336/Project/src/Textures/meshes/20255_Triangular_Prism_V1.OBJ", meshes))
-  {
-    MeshImporter importer;
-    for (const auto &mesh : meshes)
-    {
-      std::vector<shared_ptr<hittable>> triangles;
-      importer.mesh_to_tri_mat(mesh, triangles, glass);
-
-      // Add triangles to the mesh_list
-      for (const auto &tri : triangles)
-      {
-        if (tri)
-        {
-          mesh_list.add(tri);
-        }
-        else
-        {
-          std::cerr << "null triangle skipped!" << std::endl;
-        }
-      }
-    }
-
-    // Create a BVH for all the triangles in the mesh_list
-    if (!mesh_list.objects.empty())
-    {
-      auto moved_mesh = make_shared<translate>(make_shared<bvh_node>(mesh_list), vec3(0, 10, 0));
-      world_objects.add(moved_mesh);
-    }
-  }
-  else
-  {
-    std::cerr << "Failed to load the mesh!" << std::endl;
-    return;
-  }
-
-  //world_objects.add(make_shared<quad>(point3(-50, 0, 50), vec3(100, 0, 0), vec3(0, 50, 0), white)); // back
-
-  world_objects.add(make_shared<sphere>(
-      point3(0, -1000, 0), 1000, white)); // Adjusted to a darker green
-
-  world_objects.add(make_shared<sphere>(
-      point3(0, 50, 0),                     // Center of the sphere
-      10,                                           // Radius of the light
-      make_shared<diffuse_light>(color(30, 30, 30)) // Bright light
-      ));
-
-    lights.add(make_shared<sphere>(
-      point3(0, 50, 0),                     // Center of the sphere
-      10,                                           // Radius of the light
-      empty_material // Bright light
-      ));
-
-  world.add(make_shared<bvh_node>(world_objects));
-
-  camera cam;
-
-  cam.aspect_ratio = 1.0;
-  cam.image_width = 600;
-  cam.samples_per_pixel = 50;
-  cam.max_depth = 10;
-  cam.set_background(make_shared<solid_color>(color(0, 0, 0)), false);
-
-  cam.lookfrom = point3(0, 10, -30); // Position the camera in front of the prism
-  cam.lookat = point3(0, 0, 0);  // Focus on the prism center
-  cam.vfov = 45;                         // Narrow field of view for focused observation
-
-  cam.vup = vec3(0, 1, 0);
-
-  cam.defocus_angle = 0;
-
-  ThreadPool pool(std::thread::hardware_concurrency());
-
-  // Render the scene
-  cam.render(world, lights, pool);
-}
-
 
 int main(int arg, char *argv[])
 {
@@ -872,9 +783,6 @@ int main(int arg, char *argv[])
     break;
   case 12:
     stars();
-    break;
-  case 13:
-    prism();
     break;
   }
 

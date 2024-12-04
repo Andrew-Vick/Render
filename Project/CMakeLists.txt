@@ -10,6 +10,7 @@ set ( CMAKE_CXX_EXTENSIONS        OFF )
 
 set ( EXTERNAL
   src/external/stb_image.h
+  src/external/stb_image_write.h
 )
 
 set ( SOURCE_ONE_WEEKEND
