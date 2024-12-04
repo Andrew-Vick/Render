@@ -785,7 +785,7 @@ void prism()
     return;
   }
 
-  world_objects.add(make_shared<quad>(point3(-50, 0, 50), vec3(100, 0, 0), vec3(0, 50, 0), white)); // back
+  //world_objects.add(make_shared<quad>(point3(-50, 0, 50), vec3(100, 0, 0), vec3(0, 50, 0), white)); // back
 
   world_objects.add(make_shared<sphere>(
       point3(0, -1000, 0), 1000, white)); // Adjusted to a darker green

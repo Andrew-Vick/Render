@@ -9,7 +9,7 @@ class ray {
     
     // Constructor for ray with origin, direction, and time
     // Time is used to determine motion blur by using Monte Carlo integration
-    ray(const point3& origin, const vec3& direction, double time, double wavelength =550.0)
+    ray(const point3& origin, const vec3& direction, double time)
       : orig(origin), dir(direction), tm(time) {}
 
     ray(const point3& origin, const vec3& direction)
@@ -21,14 +21,13 @@ class ray {
     double time() const { return tm; }
 
     point3 at(double t) const {
-        return orig + (t*dir);
+        return orig + t*dir;
     }
 
   private:
     point3 orig;
     vec3 dir;
     double tm;
-    double wl;
 };
 
 #endif
