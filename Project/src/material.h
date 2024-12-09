@@ -93,35 +93,6 @@ private:
   }
 };
 
-// Very rudimentary subsurface scattering material
-// Want to improve this to be more physically accurate
-class subsurface_scatter : public material
-{
-public:
-  subsurface_scatter(const color &albedo, const color &scattering_col,
-                     double absorption_coef, double scattering_coef)
-      : albedo(albedo), scattering_col(scattering_col),
-        absorption_coef(absorption_coef), scattering_coef(scattering_coef) {}
-
-  bool scatter(const ray &r_in, const hit_record &rec, scatter_record &srec) const override
-  {
-    double distance = -std::log(random_double()) / (absorption_coef + scattering_coef);
-    vec3 scatter_dir = random_unit_vector();
-    vec3 scatter_origin = rec.p + scatter_dir * 0.0001;
-    double attenuation = std::exp(-(absorption_coef + scattering_coef) * distance);
-    srec.attenuation = albedo * scattering_col * attenuation;
-    srec.skip_pdf = true;
-    srec.skip_pdf_ray = ray(scatter_origin, scatter_dir, r_in.time());
-    return true;
-  }
-
-private:
-  color albedo;
-  color scattering_col;
-  double absorption_coef;
-  double scattering_coef;
-};
-
 class metal : public material
 {
 public:
@@ -152,7 +123,6 @@ public:
 
   bool scatter(const ray &r_in, const hit_record &rec, scatter_record &srec) const override
   {
-    srec.attenuation = color(1.0, 1.0, 1.0);
     srec.pdf_ptr = nullptr;
     srec.skip_pdf = true;
     double ri = rec.front_face ? (1.0 / refraction_index) : refraction_index;
@@ -170,6 +140,7 @@ public:
       direction = refract(unit_direction, rec.normal, ri);
 
     srec.skip_pdf_ray = ray(rec.p, direction, r_in.time());
+    srec.attenuation = color(1.0, 1.0, 1.0);
     return true;
   }
 
@@ -198,6 +169,8 @@ public:
 
   virtual color emitted(const ray &r_in, const hit_record &rec, double u, double v, const point3 &p) const override
   {
+    if(!rec.front_face)
+      return color(0, 0, 0);
     return emit->value(u, v, p) * intensity;
   }
 

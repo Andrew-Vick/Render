@@ -121,7 +121,6 @@ private:
         // Process materials
         if (scene->HasMaterials())
         {
-            std::clog << "has materials" << std::endl;
             for (unsigned int i = 0; i < scene->mNumMaterials; i++)
             {
                 aiMaterial *ai_material = scene->mMaterials[i];
@@ -130,11 +129,9 @@ private:
                 // Load diffuse texture if available
                 if (ai_material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
                 {
-                    std::clog << "has diffuse" << std::endl;
                     aiString path;
                     if (ai_material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS)
                     {
-                        std::clog << "Loading texture: " << path.C_Str() << std::endl;
                         // Use the actual texture path from the material
                         auto texture = make_shared<image_texture>(path.C_Str());
                         mat = make_shared<lambertian>(texture);
@@ -142,18 +139,15 @@ private:
                 }
                 else
                 {
-                    std::clog << "no diffuse" << std::endl;
                     aiColor3D aiColor(0.f, 0.f, 0.f);
                     if (AI_SUCCESS == ai_material->Get(AI_MATKEY_COLOR_DIFFUSE, aiColor))
                     {
-                        std::clog << "Loading color: " << aiColor.r << " " << aiColor.g << " " << aiColor.b << std::endl;
-                        mat = make_shared<lambertian>(color(1.0, 0.0, 0.0));
+                        mat = make_shared<lambertian>(color(aiColor.r, aiColor.g, aiColor.b));
                     }
                 }
 
                 if (!mat)
                 {
-                    std::clog << "Default material" << std::endl;
                     mat = make_shared<lambertian>(color(1.0, 0.0, 0.0)); // Default material
                 }
 

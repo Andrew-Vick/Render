@@ -125,15 +125,25 @@ public:
     return sample_face(*faces[face_index], u, v);
   }
 
-  // Implement the pure virtual method from the base class
   color value(double u, double v, const point3 &p) const override
   {
-    // This method is not used for cube maps, so we can return a default color or handle it appropriately
-    return color(0, 0, 0);
+    // Use the normal vector at point p as the direction
+    vec3 dir = unit_vector(p - sphere_center);
+    int face_index;
+    double face_u, face_v;
+    get_cube_face_and_uv(dir, face_index, face_u, face_v);
+    return sample_face(*faces[face_index], face_u, face_v);
+  }
+
+  // Add this setter for the sphere's center
+  void set_sphere_center(const point3 &center)
+  {
+    sphere_center = center;
   }
 
 private:
   std::array<std::unique_ptr<rtw_image>, 6> faces;
+  point3 sphere_center = point3(0, 0, 0);
 
   void get_cube_face_and_uv(const vec3 &dir, int &face_index, double &u, double &v) const
   {
@@ -231,25 +241,6 @@ public:
 public:
   perlin noise;
   double scale;
-};
-
-class bump_texture : public texture
-{
-public:
-  bump_texture() {}
-  bump_texture(double sc, double amp) : scale(sc), amplitude(amp) {}
-
-  // Returns a vector to perturb the normal
-  virtual color value(double u, double v, const point3 &p) const override
-  {
-    double noise_value = noise.noise(scale * p);
-    return color(1, 1, 1) * noise_value * amplitude;
-  }
-
-public:
-  perlin noise;
-  double scale;
-  double amplitude;
 };
 
 class normal_map_texture : public texture

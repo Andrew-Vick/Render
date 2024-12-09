@@ -10,14 +10,16 @@ class post_process
 {
 public:
     // Apply bloom and glare effects to an HDR image
+    // Apply bloom and glare effects to an HDR image
     void apply_bloom(std::vector<color> &hdr_image, int width, int height)
     {
-        const double threshold = 5.0; 
+        const double threshold = 20; // Lowered threshold for HDR
         std::vector<color> bright_pass = extract_bright_areas(hdr_image, threshold);
 
-        std::vector<color> blurred_image = gaussian_blur(bright_pass, width, height, 10);
+        int blur_radius = 2; // Increased blur radius
+        std::vector<color> blurred_image = gaussian_blur(bright_pass, width, height, blur_radius);
 
-        const int kernel_size = 31; 
+        int kernel_size = 11; // Larger kernel for more prominent streaks
         std::vector<double> star_kernel = create_star_kernel(kernel_size);
         std::vector<color> glare_image = convolve(bright_pass, star_kernel, width, height, kernel_size);
 
@@ -32,25 +34,28 @@ private:
         for (size_t i = 0; i < image.size(); ++i)
         {
             double luminance = image[i].length();
-            bright_pass[i] = (luminance > threshold) ? image[i] : color(0, 0, 0);
+            double intensity = smoothstep(threshold, threshold + 10.0, luminance);
+            bright_pass[i] = image[i] * intensity;
         }
         return bright_pass;
     }
 
-    // Combine bloom and glare effects into the original image
-    void combine_effects(
-        std::vector<color> &image,
-        const std::vector<color> &blurred_image,
-        const std::vector<color> &glare_image)
+    double smoothstep(double edge0, double edge1, double x)
     {
-        for (size_t i = 0; i < image.size(); ++i)
-        {
-            double luminance = image[i].length();
-            double bloom_intensity = luminance / 100.0; // Scale factor for bloom
-            double glare_intensity = luminance / 50.0;  // Scale factor for glare
+        x = (x - edge0) / (edge1 - edge0);
+        x = (x < 0.0) ? 0.0 : (x > 1.0) ? 1.0 : x;
+        return x * x * (3 - 2 * x);
+    }
 
-            image[i] += blurred_image[i] * bloom_intensity;
-            image[i] += glare_image[i] * glare_intensity;
+    // Combine bloom and glare effects into the original image
+    void combine_effects(std::vector<color> &image, const std::vector<color> &blurred_image, const std::vector<color> &glare_image)
+    {
+        double bloom_intensity = 0.5; // Adjust as needed
+        double glare_intensity = 0.7; // Adjust as needed
+        for (size_t i = 0; i < image.size(); i++)
+        {
+            image[i] += bloom_intensity * blurred_image[i] + glare_intensity * glare_image[i];
+            ;
         }
     }
 
@@ -60,17 +65,33 @@ private:
         std::vector<double> star_kernel(kernel_size * kernel_size, 0.0);
         int center = kernel_size / 2;
 
-        // Increase weights along streak directions
-        for (int i = 0; i < kernel_size; ++i)
+        // Randomly select directions for streaks
+        std::vector<std::pair<int, int>> directions = {
+            {1, 0}, {0, 1}, {1, 1}, {-1, 1}, {-1, 0}, {0, -1}, {-1, -1}, {1, -1}};
+
+        // Shuffle directions to randomize
+        std::random_shuffle(directions.begin(), directions.end());
+
+        // Use a subset of directions for randomness
+        int num_streaks = 4; // Adjust for more or fewer streaks
+        for (int d = 0; d < num_streaks; ++d)
         {
-            star_kernel[center * kernel_size + i] = 1.0;                 // Horizontal
-            star_kernel[i * kernel_size + center] = 1.0;                 // Vertical
-            star_kernel[i * kernel_size + i] += 1.0;                     // Diagonal
-            star_kernel[(kernel_size - 1 - i) * kernel_size + i] += 1.0; // Anti-diagonal
+            int dx = directions[d].first;
+            int dy = directions[d].second;
+
+            for (int i = -center; i <= center; ++i)
+            {
+                int x = center + i * dx;
+                int y = center + i * dy;
+                if (x >= 0 && x < kernel_size && y >= 0 && y < kernel_size)
+                {
+                    star_kernel[y * kernel_size + x] = 1.0;
+                }
+            }
         }
 
-        // Adjust Gaussian falloff for longer streaks
-        double sigma = kernel_size / 10.0; // Smaller sigma for slower falloff
+        // Adjust Gaussian falloff for the kernel
+        double sigma = kernel_size / 4.0; // Adjust sigma for desired falloff
         for (int y = 0; y < kernel_size; ++y)
         {
             for (int x = 0; x < kernel_size; ++x)
@@ -104,18 +125,18 @@ private:
         std::vector<color> output(image.size());
         int k_center = kernel_size / 2;
 
-        for (int y = 0; y < height; ++y)
+        for (int y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; ++x)
+            for (int x = 0; x < width; x++)
             {
                 color sum(0, 0, 0);
-                for (int ky = 0; ky < kernel_size; ++ky)
+                for (int ky = 0; ky < kernel_size; ky++)
                 {
                     int py = y + ky - k_center;
                     if (py < 0 || py >= height)
                         continue;
 
-                    for (int kx = 0; kx < kernel_size; ++kx)
+                    for (int kx = 0; kx < kernel_size; kx++)
                     {
                         int px = x + kx - k_center;
                         if (px < 0 || px >= width)
@@ -159,14 +180,14 @@ private:
         const std::vector<double> &kernel,
         int radius)
     {
-        for (int y = 0; y < height; ++y)
+        for (int y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; ++x)
+            for (int x = 0; x < width; x++)
             {
                 color sum(0, 0, 0);
                 double weight_sum = 0.0;
 
-                for (int k = -radius; k <= radius; ++k)
+                for (int k = -radius; k <= radius; k++)
                 {
                     int sample_x = x + k;
                     if (sample_x >= 0 && sample_x < width)
@@ -190,14 +211,14 @@ private:
         const std::vector<double> &kernel,
         int radius)
     {
-        for (int y = 0; y < height; ++y)
+        for (int y = 0; y < height; y++)
         {
-            for (int x = 0; x < width; ++x)
+            for (int x = 0; x < width; x++)
             {
                 color sum(0, 0, 0);
                 double weight_sum = 0.0;
 
-                for (int k = -radius; k <= radius; ++k)
+                for (int k = -radius; k <= radius; k++)
                 {
                     int sample_y = y + k;
                     if (sample_y >= 0 && sample_y < height)
@@ -219,7 +240,7 @@ private:
         std::vector<double> kernel(2 * radius + 1);
         double sum = 0.0;
 
-        for (int i = -radius; i <= radius; ++i)
+        for (int i = -radius; i <= radius; i++)
         {
             double value = std::exp(-(i * i) / (2 * sigma * sigma));
             kernel[i + radius] = value;

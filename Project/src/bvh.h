@@ -120,7 +120,6 @@ public:
            // Fallback to median split if partitioning fails
             if (mid_index == start || mid_index == end)
             {
-                std::clog << "Fallback to median split" << std::endl;
                 auto comparator = (axis == 0)   ? box_x_compare
                                   : (axis == 1) ? box_y_compare
                                                 : box_z_compare;
