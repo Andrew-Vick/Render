@@ -3,23 +3,22 @@
 
 #include "color.h"
 #include <vector>
-#include <numeric> // For std::accumulate
-#include <cmath>   // For std::sqrt and std::exp
+#include <numeric> 
+#include <cmath>   
 
 class post_process
 {
 public:
-    // Apply bloom and glare effects to an HDR image
-    // Apply bloom and glare effects to an HDR image
+
     void apply_bloom(std::vector<color> &hdr_image, int width, int height)
     {
-        const double threshold = 20; // Lowered threshold for HDR
+        const double threshold = 20; 
         std::vector<color> bright_pass = extract_bright_areas(hdr_image, threshold);
 
-        int blur_radius = 2; // Increased blur radius
+        int blur_radius = 2; // Adjust for more or less blur
         std::vector<color> blurred_image = gaussian_blur(bright_pass, width, height, blur_radius);
 
-        int kernel_size = 11; // Larger kernel for more prominent streaks
+        int kernel_size = 11; // Larger kernel will create more pronounced glare
         std::vector<double> star_kernel = create_star_kernel(kernel_size);
         std::vector<color> glare_image = convolve(bright_pass, star_kernel, width, height, kernel_size);
 
@@ -40,6 +39,7 @@ private:
         return bright_pass;
     }
 
+    // Smoothstep function for interpolation
     double smoothstep(double edge0, double edge1, double x)
     {
         x = (x - edge0) / (edge1 - edge0);
@@ -50,22 +50,24 @@ private:
     // Combine bloom and glare effects into the original image
     void combine_effects(std::vector<color> &image, const std::vector<color> &blurred_image, const std::vector<color> &glare_image)
     {
-        double bloom_intensity = 0.5; // Adjust as needed
-        double glare_intensity = 0.7; // Adjust as needed
+        // Simple scalars for bloom and glare intensity
+        // Would like to make these dynamic in the future so they're tied to the individual brightness of objects
+        double bloom_intensity = 0.5;
+        double glare_intensity = 0.7;
         for (size_t i = 0; i < image.size(); i++)
         {
             image[i] += bloom_intensity * blurred_image[i] + glare_intensity * glare_image[i];
-            ;
         }
     }
 
-    // Create a star-shaped kernel for glare effect
+    // Creates a star-shaped kernel for glare effect
     std::vector<double> create_star_kernel(int kernel_size)
     {
+        // Creates the star kernel
         std::vector<double> star_kernel(kernel_size * kernel_size, 0.0);
         int center = kernel_size / 2;
 
-        // Randomly select directions for streaks
+        // Directions for the streaks
         std::vector<std::pair<int, int>> directions = {
             {1, 0}, {0, 1}, {1, 1}, {-1, 1}, {-1, 0}, {0, -1}, {-1, -1}, {1, -1}};
 
@@ -73,7 +75,7 @@ private:
         std::random_shuffle(directions.begin(), directions.end());
 
         // Use a subset of directions for randomness
-        int num_streaks = 4; // Adjust for more or fewer streaks
+        int num_streaks = 4; 
         for (int d = 0; d < num_streaks; ++d)
         {
             int dx = directions[d].first;
@@ -90,8 +92,9 @@ private:
             }
         }
 
-        // Adjust Gaussian falloff for the kernel
-        double sigma = kernel_size / 4.0; // Adjust sigma for desired falloff
+        // Apply Gaussian weights to the kernel
+        // This creates a more natural looking glare effect
+        double sigma = kernel_size / 4.0; // Adjust for more or less blur
         for (int y = 0; y < kernel_size; ++y)
         {
             for (int x = 0; x < kernel_size; ++x)
@@ -155,17 +158,12 @@ private:
     // Apply a Gaussian blur to the image
     std::vector<color> gaussian_blur(const std::vector<color> &image, int width, int height, int radius)
     {
-        // Horizontal and vertical passes
+
         std::vector<color> temp_image(image.size());
         std::vector<color> blurred_image(image.size());
-
-        // Generate Gaussian kernel
         std::vector<double> kernel = create_gaussian_kernel(radius);
 
-        // Horizontal blur
         horizontal_blur(image, temp_image, width, height, kernel, radius);
-
-        // Vertical blur
         vertical_blur(temp_image, blurred_image, width, height, kernel, radius);
 
         return blurred_image;

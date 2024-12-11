@@ -293,6 +293,47 @@ void simple_light()
   // cam.redner(world, lights);
 }
 
+void add_mesh_to_scene(const std::string &file_path, hittable_list &world_objects, const double &rotation, const vec3 &translation)
+{
+  std::vector<Mesh> meshes;
+  hittable_list mesh_list;
+  if (MeshImporter::LoadMesh(file_path, meshes))
+  {
+    MeshImporter importer;
+    for (const auto &mesh : meshes)
+    {
+      std::vector<shared_ptr<hittable>> triangles;
+      importer.convertMeshToTriangles(mesh, triangles);
+
+      // Add triangles to the mesh_list
+      for (const auto &tri : triangles)
+      {
+        if (tri)
+        {
+          mesh_list.add(tri);
+        }
+        else
+        {
+          std::cerr << "null triangle skipped!" << std::endl;
+        }
+      }
+    }
+
+    // Create a BVH for all the triangles in the mesh_list
+    if (!mesh_list.objects.empty())
+    {
+      auto moved_mesh = make_shared<translate>(make_shared<rotate_y>(make_shared<bvh_node>(mesh_list), rotation), translation);
+      world_objects.add(moved_mesh);
+    }
+  }
+  else
+  {
+    std::cerr << "Failed to load the mesh: " << file_path << std::endl;
+  }
+  meshes.clear();
+  mesh_list.clear();
+}
+
 void final_class_render()
 {
 
@@ -308,7 +349,7 @@ void final_class_render()
   hittable_list lights;
 
   // Colors
-  color sun_color = color(1, 1, 1);
+  color sun_color = color(1, 1, 1);              // Sunlight
   color red = color(.65, .05, .05);               // Red
   color white = color(0.89, 0.67, 0.59);          // White
   color green = color(.12, .45, .15);             // Green
@@ -316,7 +357,6 @@ void final_class_render()
   color purple = color(.65, .05, .65);            // Purple
   color black = color(0, 0, 0);                   // Black
   color shooting_star = color(0.88, 0.35, 0.133); // Yellowish-White
-  color star_emission = color(0, 0, 0);
 
   // Textures
   auto moon_texture = make_shared<image_texture>("/Users/andrewvick/Coms336/Project/src/Textures/moonmap.jpg"); // Moon texture
@@ -333,7 +373,7 @@ void final_class_render()
   // Materials
   auto glass_portal_mat = make_shared<dielectric>(1.2);                // Glass material for portal
   auto glass_material = make_shared<dielectric>(1.5);                  // Glass material
-  auto light = make_shared<diffuse_light>(color(15.0, 15.0, 15.0));    // Light material
+  auto light = make_shared<diffuse_light>(color(1.0, 0.97, 0.84), 20);    // Light material
   auto aluminum = make_shared<metal>(color(0.8, 0.85, 0.88), 0.0);     // Aluminum material
   auto checker_material = make_shared<lambertian>(checker_tex);        // Checker material
   auto blue_material = make_shared<lambertian>(blue_tex);                   // Blue material
@@ -342,23 +382,22 @@ void final_class_render()
   auto sunlight_material = make_shared<diffuse_light>(sun_color, 200);  // Sunlight material
   auto moon_emission = make_shared<diffuse_light>(moon_texture, 20.0); // Moon emission material
   auto grass_material = make_shared<lambertian>(grass_tex);            // Grass material
-  auto star_mat = make_shared<diffuse_light>(star_emission);
 
   world_objects.add(make_shared<sphere>(point3(277.5, 1000, 800), 50, sunlight_material));
   lights.add(make_shared<sphere>(point3(277.5, 1000, 800), 50, empty_material));
 
-  world_objects.add(make_shared<quad>(point3(-5000, 0, 555), vec3(10000, 0, 0), vec3(0, 0, 10000), grass_material));
+  world_objects.add(make_shared<quad>(point3(-5000, 0, 555), vec3(10000, 0, 0), vec3(0, 0, 7000), grass_material));
 
   // Add specific stars beyond the moon, visible through the window
   std::vector<vec3> star_positions;
   double min_distance = 150.0; // Minimum distance between stars
 
-  int num_stars = 100;
+  int num_stars = 150;
   int attempts = 0;                         
   vec3 camera_pos = point3(278, 278, -750); 
 
   // Moon light
-  vec3 moon_pos = point3(-10, 700, 4000); 
+  vec3 moon_pos = point3(-100, 700, 4000); 
   world_objects.add(make_shared<sphere>(moon_pos, 100, moon_emission));
   lights.add(make_shared<sphere>(moon_pos, 100, empty_material));
 
@@ -366,14 +405,14 @@ void final_class_render()
   {
     // Generate a random point on the window
     double window_x = random_double(77.5, 555);
-    double window_y = random_double(200, 555);
+    double window_y = random_double(250, 555);
 
     // Direction from camera to the window point
     vec3 direction = vec3(window_x, window_y, 555) - camera_pos;
     direction = unit_vector(direction);
 
     // Random distance beyond the window
-    double star_distance = random_double(6500.0, 7000.0); // Adjust as needed
+    double star_distance = random_double(9000.0, 10000.0);
 
     // Compute star position
     point3 new_position = camera_pos + star_distance * direction;
@@ -400,7 +439,7 @@ void final_class_render()
       star_positions.push_back(new_position);
 
       double star_radius = random_double(1.0, 3.0);
-      double star_brightness = random_double(0.5, 1.0) * 20.0;
+      double star_brightness = random_double(0.3, 1.0) * 25.0;
       color star_emission = color(star_brightness, star_brightness, star_brightness);
       auto star_mat = make_shared<diffuse_light>(star_emission);
       world_objects.add(make_shared<sphere>(new_position, star_radius, star_mat));
@@ -411,7 +450,7 @@ void final_class_render()
   }
 
   // Shooting star
-  auto moving_sphere = make_shared<sphere>(point3(300, 700, 1500), point3(500, 600, 6000), 5, make_shared<diffuse_light>(shooting_star, 30.0));
+  auto moving_sphere = make_shared<sphere>(point3(300, 520, 2000), point3(600, 510, 6000), 5, make_shared<diffuse_light>(shooting_star, 30.0));
   world_objects.add(moving_sphere);
   lights.add(moving_sphere);
 
@@ -428,51 +467,18 @@ void final_class_render()
   auto cubemap_texture = make_shared<cube_map_texture>(cubemap_faces);
   // center the sphere texture, can change values to move which part of the cubemap is visible
   // +y will show more ground, -y will show more sky
-  cubemap_texture->set_sphere_center(point3(255, 10, 400)); 
+  cubemap_texture->set_sphere_center(point3(255, 50, 400)); 
   auto cubemap_material = make_shared<lambertian>(cubemap_texture);
-  auto inner_sphere = make_shared<sphere>(point3(255, 80, 400), 70, cubemap_material);
-  auto outer_sphere = make_shared<sphere>(point3(255, 80, 400), 80, glass_portal_mat);
+  auto inner_sphere = make_shared<sphere>(point3(255, 90, 400), 70, cubemap_material);
+  auto outer_sphere = make_shared<sphere>(point3(255, 90, 400), 85, glass_portal_mat);
 
   world_objects.add(inner_sphere);
   world_objects.add(outer_sphere);
 
   // Load and convert mesh to triangles
-  // std::vector<Mesh> meshes;
-  // hittable_list mesh_list;
-  // if (MeshImporter::LoadMesh("/Users/andrewvick/Coms336/Project/src/Textures/meshes/Flint2.obj", meshes))
-  // {
-  //   MeshImporter importer;
-  //   for (const auto &mesh : meshes)
-  //   {
-  //     std::vector<shared_ptr<hittable>> triangles;
-  //     importer.convertMeshToTriangles(mesh, triangles);
-
-  //     // Add triangles to the mesh_list
-  //     for (const auto &tri : triangles)
-  //     {
-  //       if (tri)
-  //       {
-  //         mesh_list.add(tri);
-  //       }
-  //       else
-  //       {
-  //         std::cerr << "null triangle skipped!" << std::endl;
-  //       }
-  //     }
-  //   }
-
-  //   // Create a BVH for all the triangles in the mesh_list
-  //   if (!mesh_list.objects.empty())
-  //   {
-  //     auto moved_mesh = make_shared<translate>(make_shared<rotate_y>(make_shared<bvh_node>(mesh_list), 220), vec3(520, 0, 300));
-  //     world_objects.add(moved_mesh);
-  //   }
-  // }
-  // else
-  // {
-  //   std::cerr << "Failed to load the mesh!" << std::endl;
-  //   return;
-  // }
+  add_mesh_to_scene("/Users/andrewvick/Coms336/Project/src/Textures/meshes/Flint2.obj", world_objects, 220, vec3(520, 0, 300));
+  add_mesh_to_scene("/Users/andrewvick/Coms336/Project/src/Textures/meshes/table2.obj", world_objects, 90, vec3(70, 30, 277.5));
+  add_mesh_to_scene("/Users/andrewvick/Coms336/Project/src/Textures/meshes/chess2.obj", world_objects, 90, vec3(70, 75, 277.5));
 
   // Cornell box sides
   world_objects.add(make_shared<quad>(point3(0, 0, 555), vec3(0, 0, -555), vec3(0, 555, 0), make_shared<lambertian>(red_tex, wall_material))); // right
@@ -484,14 +490,14 @@ void final_class_render()
   double wall_height = 555;
   double window_width = 400;
   double window_height = 400;
-  double window_x_offset = (wall_width - window_width) / 2;   // Center the window horizontally
-  double window_y_offset = (wall_height - window_height) / 2; // Center the window vertically
+  double window_x_offset = (wall_width - window_width) / 2;   
+  double window_y_offset = (wall_height - window_height) / 2; 
 
   // Dimensions of mirror
   double mirror_width = 200;
   double mirror_height = 200;
-  double mirror_x_offset = (wall_width - mirror_width) / 2;   // Center the mirror horizontally
-  double mirror_y_offset = (wall_height - mirror_height) / 2; // Center the mirror vertically
+  double mirror_x_offset = (wall_width - mirror_width) / 2;   
+  double mirror_y_offset = (wall_height - mirror_height) / 2; 
 
   // Left Wall (4 surrounding quads + mirror center)
   world_objects.add(make_shared<quad>(point3(555, 0, 0), vec3(0, 0, mirror_x_offset), vec3(0, mirror_y_offset, 0), make_shared<lambertian>(purple_tex, wall_material)));                                                                          // Bottom portion of left wall
@@ -513,31 +519,34 @@ void final_class_render()
   lights.add(make_shared<quad>(point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), empty_material));
 
   // Smoke around light
-  world_objects.add(make_shared<constant_medium>(box(point3(200, 555, 200), point3(350, 545, 340), white_material), 0.002, color(0.4, 0.4, 0.4)));
+  world_objects.add(make_shared<constant_medium>(make_shared<sphere>(point3(277.5, 700, 277.5), 200, white_material), 0.0005, color(0.4, 0.4, 0.4)));
 
+  // world_objects.add(make_shared<sphere>(point3(277.5, 200, 277.5), 20, light));
+  // lights.add(make_shared<sphere>(point3(277.5, 200, 277.5), 20, empty_material));
 
-  world.add(make_shared<bvh_node>(world_objects));
-  
+world.add(make_shared<bvh_node>(world_objects));
 
-  camera cam;
+camera cam;
 
-  cam.aspect_ratio = 1.0;
-  cam.image_width = 500;
-  cam.vfov = 40;
-  cam.samples_per_pixel = 100;
-  cam.max_depth = 10;
-  cam.set_background(make_shared<solid_color>(color(0, 0, 0)), false);
+cam.aspect_ratio = 1.0;
+cam.image_width = 1440;
+cam.vfov = 40;
+cam.samples_per_pixel = 10000;
+cam.max_depth = 50;
+cam.set_background(make_shared<solid_color>(color(0, 0, 0)), false);
 
-  cam.lookfrom = point3(278, 278, -750);
-  cam.lookat = point3(278, 278, 0);
-  cam.vup = vec3(0, 1, 0);
+cam.lookfrom = point3(278, 278, -750);
+cam.lookat = point3(278, 278, 0);
+// cam.lookfrom = point3(150, 145, 100);
+// cam.lookat = point3(70, 75, 277.5);
+cam.vup = vec3(0, 1, 0);
 
-  cam.defocus_angle = 0;
+cam.defocus_angle = 0;
 
-  ThreadPool pool(std::thread::hardware_concurrency());
+ThreadPool pool(std::thread::hardware_concurrency());
 
-  // Render the scene
-  cam.render(world, lights, pool);
+// Render the scene
+cam.render(world, lights, pool);
 }
 
 void cornell_smoke()
