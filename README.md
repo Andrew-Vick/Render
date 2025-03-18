@@ -4,6 +4,7 @@
 
 Render is a physically based ray tracer project developed as part of Coms 336. The project started with the three books "Ray Tracing in One Weekend," "Ray Tracing: The Next Week," and "Ray Tracing: The Rest of Your Life." It includes various advanced features such as:
 
+- Configurable Camera
 - Lambertian reflection
 - Metal and glass materials
 - Metallic surfaces as mirrors
@@ -19,6 +20,7 @@ Building on the concepts from these books, I have personally extended the ray tr
 - Multi-threading (no GPU acceleration)
 - Cube maps
 - Post-processing effects like bloom and glare
+- HDR renders
   
 ## Features
 
@@ -68,5 +70,5 @@ Building on the concepts from these books, I have personally extended the ray tr
    cmake --build ./build
 4. Run the ray tracer:
    ```
-   ./
+   ./inOneWeeked
    
