@@ -7,17 +7,19 @@ Render is a physically based ray tracer project developed as part of Coms 336. T
 - Lambertian reflection
 - Metal and glass materials
 - Metallic surfaces as mirrors
-- Triangle meshes
 - Importance sampling
 - Bidirectional Reflectance Distribution Functions (BRDFs)
 - Shadows
 - Probability Density Functions (PDFs)
 - Perlin noise
+- Quadrilateral and spherical objects
+
+Building on the concepts from these books, I have personally extended the ray tracer to include:
+- Trinagle meshes
+- Multi-threading (no GPU acceleration)
 - Cube maps
 - Post-processing effects like bloom and glare
-- Quadrilateral and spherical objects
-- Multi-threading (no GPU acceleration)
-
+  
 ## Features
 
 1. **Materials**:
