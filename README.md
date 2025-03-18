@@ -118,7 +118,22 @@ Objects in the scene are defined with their geometric properties and materials:
 #### **Spheres**
 ```cpp
 make_shared<sphere>(point3(x, y, z), radius, material);
-    
+```
+- **Center**: the spheres position.
+- **Radius**: Size of the sphere
+- **material**: Determines how light interacts with the sphere.
 
+### **Boxes**
+```cpp
+box(corner1, corner2, material);
+```
+- **corner1, corner2**: opposite corners defining the box's dimensions.
+- **material**: Determines the box's surface properties.
 
-   
+### **Quads**
+```cpp
+make_shared<quad>(corner, u, v, material);
+```
+- **corner**: A point3 defining the bottom-left corner.
+- **u, v**: Vectors defining the width and height.
+- **material**: the material of the quad
