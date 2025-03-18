@@ -71,4 +71,54 @@ Building on the concepts from these books, I have personally extended the ray tr
 4. Run the ray tracer:
    ```
    ./inOneWeeked
+
+### Coordinate System
+
+The ray tracer uses a right-handed coordinate system with the following conventions:
+
+- **X-axis**: Positive X is to the right, negative X is to the left.
+- **Y-axis**: Positive Y is upwards, negative Y is downwards.
+- **Z-axis**: Positive Z is towards the camera, negative Z is away from the camera.
+
+### Points and Vectors
+
+Points and vectors define the structure of the scene:
+
+- **point3**: Represents a 3D point in space.
+- **vec3**: Represents a 3D vector used for directions, offsets, and calculations.
+- **color**: Represents an RGB color value.
+
+### Rendering Process
+
+The ray tracer simulates light by casting rays from a virtual camera into the scene, computing interactions with objects, and determining the final pixel color. The core steps include:
+
+1. **Ray Generation**  
+   - A ray is defined by an origin (camera position) and a direction.  
+   - Each pixel in the image corresponds to a ray cast through the scene.
+
+2. **Object Intersection**  
+   - Rays are tested against objects (e.g., spheres, quads, boxes) to find the closest intersection.  
+   - If a ray hits an object, the intersection point, surface normal, and material properties are computed.
+
+3. **Shading & Lighting**  
+   - The color at an intersection is determined based on material properties and light interactions.  
+   - Support for diffuse surfaces, reflections, and refractions is handled via recursive ray tracing.
+
+4. **Recursive Ray Tracing**  
+   - If an object is reflective or transparent, secondary rays (reflection/refraction) are cast to determine indirect lighting effects.  
+   - This recursion continues until a termination condition (depth limit or negligible contribution) is met.
+
+5. **Final Image Composition**  
+   - The computed color for each pixel is stored and written to an image file.
+
+### Object Representation
+
+Objects in the scene are defined with their geometric properties and materials:
+
+#### **Spheres**
+```cpp
+make_shared<sphere>(point3(x, y, z), radius, material);
+    
+
+
    
