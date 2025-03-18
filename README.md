@@ -47,6 +47,19 @@ Building on the concepts from these books, I have personally extended the ray tr
 
 6. **Performance**:
    - **Multi-threading**: Improved rendering speed using multiple CPU cores.
+  
+## Rendered Images
+
+Here are some examples of images rendered using this ray tracer:
+
+### Bouncing Spheres
+![Rendered Sphere](Project/mats.png)
+
+### Chess
+![Chess](Project/mats.png)
+
+### Post-processing
+![Chess](Project/with_post_processing.png)
 
 ## How to Use
 
