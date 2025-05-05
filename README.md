@@ -59,7 +59,7 @@ Here are some examples of images rendered using this ray tracer:
 ![Chess](Project/chess.png)
 
 ### Post-processing
-![Post Processing](Project/with_post_processing.png)
+![Post Processing](Project/with_post_process.png)
 
 ## How to Use
 
