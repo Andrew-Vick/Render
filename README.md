@@ -56,10 +56,10 @@ Here are some examples of images rendered using this ray tracer:
 ![Rendered Sphere](Project/mats.png)
 
 ### Chess
-![Chess](Project/mats.png)
+![Chess](Project/chess.png)
 
 ### Post-processing
-![Chess](Project/with_post_processing.png)
+![Post Processing](Project/with_post_processing.png)
 
 ## How to Use
 
